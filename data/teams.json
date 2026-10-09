@@ -1,0 +1,13 @@
+[
+  { "id": "MCL", "name": "McLaren",         "color": "#F08A12", "carPerformance": 1.000, "pitBoxOrder": 1 },
+  { "id": "MER", "name": "Mercedes",        "color": "#1FB89A", "carPerformance": 1.000, "pitBoxOrder": 2 },
+  { "id": "RBR", "name": "Red Bull Racing", "color": "#2B4FA8", "carPerformance": 0.998, "pitBoxOrder": 3 },
+  { "id": "FER", "name": "Ferrari",         "color": "#DC2B2B", "carPerformance": 0.997, "pitBoxOrder": 4 },
+  { "id": "WIL", "name": "Williams",        "color": "#3D8BE0", "carPerformance": 0.990, "pitBoxOrder": 5 },
+  { "id": "RB",  "name": "Racing Bulls",    "color": "#7FA6F2", "carPerformance": 0.988, "pitBoxOrder": 6 },
+  { "id": "AST", "name": "Aston Martin",    "color": "#0E7A5C", "carPerformance": 0.987, "pitBoxOrder": 7 },
+  { "id": "HAA", "name": "Haas",            "color": "#A9AEB5", "carPerformance": 0.987, "pitBoxOrder": 8 },
+  { "id": "AUD", "name": "Audi",            "color": "#6E6E73", "carPerformance": 0.985, "pitBoxOrder": 9 },
+  { "id": "ALP", "name": "Alpine",          "color": "#E0559A", "carPerformance": 0.984, "pitBoxOrder": 10 },
+  { "id": "CAD", "name": "Cadillac",        "color": "#E9C25A", "carPerformance": 0.978, "pitBoxOrder": 11 }
+]

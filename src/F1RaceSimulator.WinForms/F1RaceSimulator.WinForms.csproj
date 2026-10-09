@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Віконна програма Windows Forms. Уся логіка гонки — у проєкті F1RaceSimulator.Core,
+       тут лише інтерфейс: вікна, таблиці та малювання траси. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>12.0</LangVersion>
+    <RootNamespace>F1RaceSimulator.WinForms</RootNamespace>
+    <AssemblyName>F1RaceSimulator</AssemblyName>
+    <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
+    <ApplicationVisualStyles>true</ApplicationVisualStyles>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\F1RaceSimulator.Core\F1RaceSimulator.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Файли даних сезону копіюються в папку Data поруч із програмою. -->
+  <ItemGroup>
+    <None Include="..\..\data\*.json" Link="Data\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

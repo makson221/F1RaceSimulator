@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Бібліотека з усією логікою симуляції. Не залежить від Windows Forms,
+       тому її можна тестувати окремо (принцип єдиної відповідальності). -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>12.0</LangVersion>
+    <RootNamespace>F1RaceSimulator.Core</RootNamespace>
+    <AssemblyName>F1RaceSimulator.Core</AssemblyName>
+  </PropertyGroup>
+
+</Project>
