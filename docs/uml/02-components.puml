@@ -1,0 +1,28 @@
+@startuml components
+!include _style.iuml
+title Діаграма компонентів — структура рішення
+left to right direction
+
+package "F1RaceSimulator.sln" {
+  component "F1RaceSimulator.WinForms\n(net8.0-windows, WinExe)" as UI
+  component "F1RaceSimulator.Core\n(net8.0, бібліотека класів)" as CORE
+  component "F1RaceSimulator.Tests\n(net8.0, xUnit)" as TESTS
+}
+
+folder "data" {
+  file "teams.json" as T
+  file "drivers.json" as D
+  file "tracks.json" as TR
+}
+
+UI --> CORE : використовує
+TESTS --> CORE : тестує
+CORE ..> T : DataLoader
+CORE ..> D : DataLoader
+CORE ..> TR : DataLoader
+note bottom of CORE
+  Уся логіка гонки.
+  Не залежить від Windows Forms,
+  тому покрита модульними тестами.
+end note
+@enduml

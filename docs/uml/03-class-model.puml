@@ -1,0 +1,173 @@
+@startuml class-model
+!include _style.iuml
+title Діаграма класів — модель предметної області, шини та стратегії
+
+package "Models" {
+  class Team {
+    +Id : string
+    +Name : string
+    +Color : string
+    +CarPerformance : double
+    +PitBoxOrder : int
+  }
+  class Driver {
+    +Code : string
+    +FirstName : string
+    +LastName : string
+    +TeamId : string
+    +Pace : double
+    +Consistency : double
+    +TyreManagement : double
+    +Strategy : string
+    +PitThreshold : double
+    +FullName : string
+  }
+  class Track {
+    +Id : string
+    +Round : int
+    +GrandPrix : string
+    +Circuit : string
+    +LengthKm : double
+    +Laps : int
+    +TypicalLapSeconds : double
+    +TyreWearFactor : double
+    +PitLaneSeconds : double
+    +Weather : string
+    +RaceDate : DateOnly?
+  }
+  class TrackLayout {
+    +Points : double[][]
+    +PitLane : double[][]
+    +PitEntry : double
+    +PitExit : double
+    +TrackPath : Polyline
+    +PitLanePath : Polyline
+    +PitSpan : double
+  }
+  enum TyreCompound {
+    Soft
+    Medium
+    Hard
+  }
+}
+
+package "Geometry" {
+  class Polyline {
+    -_points : Vec2[]
+    -_cumulative : double[]
+    +IsClosed : bool
+    +Length : double
+    +PointAt(fraction : double) : Vec2
+    +DirectionAt(fraction : double) : Vec2
+    +{static} Wrap(value : double) : double
+  }
+  class Vec2 <<struct>> {
+    +X : double
+    +Y : double
+  }
+}
+
+package "Tyres" {
+  abstract class Tyre {
+    +{abstract} Compound : TyreCompound
+    +{abstract} WearPerLap : double
+    +{abstract} PaceBonus : double
+    +Condition : double {readOnly}
+    +LapsUsed : double {readOnly}
+    +Letter : string
+    +PaceMultiplier : double {virtual}
+    +Wear(laps, trackFactor, driverFactor) : void
+    +EstimatedLapsLeft(...) : double
+  }
+  class SoftTyre {
+    +WearPerLap = 4.6
+    +PaceBonus = +0.006
+    +PaceMultiplier : double {override}
+  }
+  class MediumTyre {
+    +WearPerLap = 3.1
+    +PaceBonus = 0
+  }
+  class HardTyre {
+    +WearPerLap = 2.1
+    +PaceBonus = -0.005
+  }
+  class TyreFactory <<static>> {
+    +{static} Create(compound, condition) : Tyre
+    +{static} Create(code : string, condition) : Tyre
+  }
+}
+
+package "Strategies" {
+  interface IPitStrategy {
+    +Name : string
+    +Threshold : double
+    +ShouldPit(car, lapsRemaining, track) : bool
+    +ChooseCompound(car, lapsRemaining, track) : TyreCompound
+  }
+  class ThresholdPitStrategy {
+    #MaxTyreUsage : double = 80
+    +ShouldPit(...) : bool {virtual}
+    +ChooseCompound(...) : TyreCompound {virtual}
+  }
+  class AggressivePitStrategy {
+    #MaxTyreUsage : double = 95
+  }
+  class PitStrategyFactory <<static>> {
+    +{static} Create(type, threshold) : IPitStrategy
+  }
+}
+
+package "Simulation" {
+  class Car {
+    +Driver : Driver
+    +Team : Team
+    +Tyre : Tyre {readOnly}
+    +Strategy : IPitStrategy
+    +State : CarState {readOnly}
+    +Distance : double {readOnly}
+    +PitStops : int {readOnly}
+    +Position : int
+    +RaceDistance : double
+    +TyreWearRate : double
+    +BasePace : double
+    +Advance(laps, trackWearFactor) : void
+    +EnterPitLane(pitSpan, boxPosition) : void
+    +MoveInPitLane(delta) : bool
+    +BeginStop(seconds) : void
+    +TickStop(seconds) : bool
+    +ChangeTyres(newTyre : Tyre) : void
+    +Retire(reason) : void
+    +Finish(time) : void
+  }
+  enum CarState {
+    OnTrack
+    InPitLane
+    PitStop
+    Finished
+    Retired
+  }
+}
+
+Tyre <|-- SoftTyre
+Tyre <|-- MediumTyre
+Tyre <|-- HardTyre
+Tyre --> TyreCompound
+TyreFactory ..> Tyre : <<create>>
+
+IPitStrategy <|.. ThresholdPitStrategy
+ThresholdPitStrategy <|-- AggressivePitStrategy
+PitStrategyFactory ..> IPitStrategy : <<create>>
+
+Car o--> "1" Driver
+Car o--> "1" Team
+Car *--> "1" Tyre : поточні шини
+Car o--> "1" IPitStrategy : стратегія
+Car --> CarState
+Driver ..> Team : TeamId
+
+Track *--> "1" TrackLayout
+TrackLayout *--> "2" Polyline
+Polyline *--> "2..*" Vec2
+IPitStrategy ..> Track
+@enduml

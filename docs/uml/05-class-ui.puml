@@ -1,0 +1,71 @@
+@startuml class-ui
+!include _style.iuml
+title Діаграма класів — інтерфейс користувача (Windows Forms)
+
+package "System.Windows.Forms" {
+  class Form
+  class Panel
+}
+
+package "System" {
+  class EventArgs
+}
+
+package "F1RaceSimulator.WinForms" {
+  class MainForm {
+    -_data : SeasonData
+    -_race : Race?
+    -_log : EventLogObserver
+    -_track : Track
+    -_selected : Car?
+    -_timeScale : double
+    -_running : bool
+    +MainForm(data : SeasonData)
+    +OnRaceEvent(race, e) : void
+    -PrepareRace() : void
+    -TimerSim_Tick(sender, e) : void
+    -SetRunning(running : bool) : void
+    -RefreshStandings() : void
+    -RefreshDriverCard() : void
+    -RefreshStatus() : void
+    -OnRaceFinished() : void
+  }
+  class ChampionshipForm {
+    -ChampionshipForm_Load(sender, e) : void
+  }
+  class TrackPanel {
+    -_renderer : TrackRenderer
+    +Track : Track?
+    +Race : Race?
+    +SelectedCar : Car?
+    +CarClicked : event EventHandler<CarEventArgs>
+    #OnPaint(e) : void
+    #OnMouseClick(e) : void
+  }
+  class TrackRenderer {
+    +CarPositions : IReadOnlyList<(Car, PointF)>
+    +Draw(g, bounds, track, race, selected) : void
+    +HitTest(point) : Car?
+    +ColorOf(team) : Color
+  }
+  class CarEventArgs {
+    +Car : Car
+  }
+  class Program <<static>> {
+    -{static} Main() : void
+  }
+}
+
+interface IRaceObserver
+
+Form <|-- MainForm
+Form <|-- ChampionshipForm
+Panel <|-- TrackPanel
+EventArgs <|-- CarEventArgs
+IRaceObserver <|.. MainForm
+MainForm *--> "1" TrackPanel
+TrackPanel *--> "1" TrackRenderer
+TrackPanel ..> CarEventArgs : <<create>>
+MainForm ..> ChampionshipForm : ShowDialog()
+Program ..> MainForm : Application.Run
+@enduml

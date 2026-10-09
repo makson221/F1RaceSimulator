@@ -1,0 +1,18 @@
+@startuml state-car
+!include _style.iuml
+title Діаграма станів боліда (CarState)
+
+[*] --> OnTrack : Race.Start()\nPlaceOnGrid()
+
+OnTrack --> InPitLane : EnterPitLane()\n[ShouldPit() = true]
+InPitLane --> PitStop : MoveInPitLane()\n[доїхав до боксу]
+PitStop --> InPitLane : TickStop()\n[механіки закінчили]\n/ ChangeTyres()
+InPitLane --> OnTrack : MoveInPitLane()\n[виїзд з піт-лейну]
+
+OnTrack --> Finished : Finish()\n[клетчастий прапор]
+InPitLane --> Finished : Finish()
+OnTrack --> Retired : Retire()\n[технічна несправність]
+
+Finished --> [*]
+Retired --> [*]
+@enduml

@@ -1,0 +1,41 @@
+@startuml use-cases
+!include _style.iuml
+title Діаграма варіантів використання — F1 Race Simulator
+left to right direction
+
+actor "Користувач" as User
+
+rectangle "F1 Race Simulator" {
+  usecase "Обрати етап календаря" as UC1
+  usecase "Почати гонку" as UC2
+  usecase "Провести кваліфікацію" as UC3
+  usecase "Запустити / призупинити\nсимуляцію" as UC4
+  usecase "Змінити швидкість\nсимуляції" as UC5
+  usecase "Переглядати таблицю\nпозицій" as UC6
+  usecase "Обрати пілота\nі переглянути його картку" as UC7
+  usecase "Переглядати журнал подій" as UC8
+  usecase "Отримати результати\nгонки" as UC9
+  usecase "Нарахувати очки\nчемпіонату" as UC10
+  usecase "Переглянути таблицю\nчемпіонату" as UC11
+  usecase "Зберегти чемпіонат у файл" as UC12
+  usecase "Відкрити чемпіонат з файлу" as UC13
+  usecase "Скинути результати сезону" as UC14
+}
+
+User --> UC1
+User --> UC2
+User --> UC4
+User --> UC5
+User --> UC6
+User --> UC7
+User --> UC8
+User --> UC11
+User --> UC12
+User --> UC13
+User --> UC14
+
+UC1 ..> UC2 : <<include>>
+UC2 ..> UC3 : <<include>>
+UC9 ..> UC4 : <<extend>>\nпісля фінішу
+UC9 ..> UC10 : <<include>>
+@enduml

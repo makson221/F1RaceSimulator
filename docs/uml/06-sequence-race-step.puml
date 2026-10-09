@@ -1,0 +1,54 @@
+@startuml sequence-race-step
+!include _style.iuml
+title Діаграма послідовності — один крок симуляції з піт-стопом
+autonumber
+
+participant "Timer" as Timer
+participant ":MainForm" as Form
+participant ":Race" as Race
+participant ":Car" as Car
+participant ":Tyre" as Tyre
+participant ":IPitStrategy" as Strategy
+participant ":EventLogObserver" as Log
+participant ":TrackPanel" as Panel
+participant ":TrackRenderer" as Renderer
+
+Timer -> Form : Tick (кожні 30 мс)
+activate Form
+Form -> Race : Step(realSeconds × timeScale)
+activate Race
+loop для кожного боліда на трасі
+  Race -> Car : Advance(laps, TyreWearFactor)
+  activate Car
+  Car -> Tyre : Wear(laps, trackFactor, driverFactor)
+  Tyre --> Car
+  deactivate Car
+  alt болід перетнув в'їзд у піт-лейн
+    Race -> Strategy : ShouldPit(car, lapsRemaining, track)
+    Strategy -> Tyre : Condition, WearPerLap
+    Strategy --> Race : true
+    Race -> Car : EnterPitLane(pitSpan, boxPosition)
+    Race -> Log : OnRaceEvent(PitEntry)
+    Log --> Form : EventAdded → AppendLog()
+  end
+end
+loop для болідів у піт-лейні
+  Race -> Car : MoveInPitLane(delta) / TickStop(dt)
+  alt зупинку завершено
+    Race -> Strategy : ChooseCompound(car, lapsRemaining, track)
+    Strategy --> Race : TyreCompound
+    Race -> Car : ChangeTyres(TyreFactory.Create(compound))
+    Race -> Log : OnRaceEvent(PitStop)
+  end
+end
+Race -> Race : UpdateStandings()
+opt обгін
+  Race -> Log : OnRaceEvent(Overtake)
+end
+Race --> Form
+deactivate Race
+Form -> Panel : Invalidate()
+Panel -> Renderer : Draw(g, bounds, track, race, selected)
+Form -> Form : RefreshStandings(),\nRefreshDriverCard(), RefreshStatus()
+deactivate Form
+@enduml
