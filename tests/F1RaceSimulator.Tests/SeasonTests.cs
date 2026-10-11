@@ -132,4 +132,15 @@ public class SeasonTests
     {
         Assert.Equal(expected, UkrainianText.Laps(laps));
     }
+
+    [Theory]
+    [InlineData(1, "1 очко")]
+    [InlineData(4, "4 очки")]
+    [InlineData(12, "12 очок")]
+    [InlineData(25, "25 очок")]
+    [InlineData(101, "101 очко")]
+    public void UkrainianText_DeclinesPoints(int points, string expected)
+    {
+        Assert.Equal(expected, UkrainianText.Points(points));
+    }
 }

@@ -402,7 +402,7 @@ namespace F1RaceSimulator.WinForms
             this.grpDriver.Padding = new System.Windows.Forms.Padding(8);
             this.grpDriver.TabIndex = 0;
             this.grpDriver.TabStop = false;
-            this.grpDriver.Text = "Обраний пілот (клацніть рядок у таблиці або болід на трасі)";
+            this.grpDriver.Text = "Обраний пілот";
             //
             // lblDriverInfo
             //

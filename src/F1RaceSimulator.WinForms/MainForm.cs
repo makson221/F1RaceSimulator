@@ -195,7 +195,7 @@ public partial class MainForm : Form, IRaceObserver
         Championship.Instance.AddRaceResult(_track, results);
 
         string podium = string.Join(Environment.NewLine, results.Take(3).Select(r =>
-            $"{r.Position}. {r.Car.Driver.FullName} ({r.Car.Team.Name}) — {r.Points} очок"));
+            $"{r.Position}. {r.Car.Driver.FullName} ({r.Car.Team.Name}) — {UkrainianText.Points(r.Points)}"));
         MessageBox.Show(this,
             $"{_track.GrandPrix} завершено!{Environment.NewLine}{Environment.NewLine}{podium}" +
             $"{Environment.NewLine}{Environment.NewLine}Результат додано до таблиці чемпіонату (F9).",
