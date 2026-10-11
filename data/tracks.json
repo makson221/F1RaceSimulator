@@ -10,7 +10,7 @@
   "laps": 58,
   "typicalLapSeconds": 80,
   "tyreWearFactor": 1.0,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 32.7,
   "weather": "Сухо, 22 °C",
   "layout": {
    "points": [
@@ -425,7 +425,7 @@
   "laps": 56,
   "typicalLapSeconds": 96,
   "tyreWearFactor": 1.1,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 32.2,
   "weather": "Хмарно, 18 °C",
   "layout": {
    "points": [
@@ -952,7 +952,7 @@
   "laps": 53,
   "typicalLapSeconds": 93,
   "tyreWearFactor": 1.25,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 33.8,
   "weather": "Сухо, 20 °C",
   "layout": {
    "points": [
@@ -1471,7 +1471,7 @@
   "laps": 57,
   "typicalLapSeconds": 90,
   "tyreWearFactor": 1.0,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 30.2,
   "weather": "Спека, 31 °C",
   "layout": {
    "points": [
@@ -1918,7 +1918,7 @@
   "laps": 70,
   "typicalLapSeconds": 75,
   "tyreWearFactor": 0.85,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 33.2,
   "weather": "Сухо, 19 °C",
   "layout": {
    "points": [
@@ -2305,7 +2305,7 @@
   "laps": 78,
   "typicalLapSeconds": 75,
   "tyreWearFactor": 0.6,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 30.3,
   "weather": "Сухо, 24 °C",
   "layout": {
    "points": [
@@ -2888,7 +2888,7 @@
   "laps": 66,
   "typicalLapSeconds": 78,
   "tyreWearFactor": 1.25,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 29.5,
   "weather": "Сухо, 28 °C",
   "layout": {
    "points": [
@@ -3355,7 +3355,7 @@
   "laps": 71,
   "typicalLapSeconds": 68,
   "tyreWearFactor": 1.05,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 29.2,
   "weather": "Сухо, 25 °C",
   "layout": {
    "points": [
@@ -3706,7 +3706,7 @@
   "laps": 52,
   "typicalLapSeconds": 90,
   "tyreWearFactor": 1.3,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 31.8,
   "weather": "Мінлива хмарність, 18 °C",
   "layout": {
    "points": [
@@ -4229,7 +4229,7 @@
   "laps": 44,
   "typicalLapSeconds": 107,
   "tyreWearFactor": 1.1,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 35.5,
   "weather": "Хмарно, 17 °C",
   "layout": {
    "points": [
@@ -4728,7 +4728,7 @@
   "laps": 70,
   "typicalLapSeconds": 81,
   "tyreWearFactor": 1.0,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 33.2,
   "weather": "Спека, 32 °C",
   "layout": {
    "points": [
@@ -5159,7 +5159,7 @@
   "laps": 72,
   "typicalLapSeconds": 74,
   "tyreWearFactor": 1.05,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 31.0,
   "weather": "Вітряно, 19 °C",
   "layout": {
    "points": [
@@ -5638,7 +5638,7 @@
   "laps": 53,
   "typicalLapSeconds": 82,
   "tyreWearFactor": 0.8,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 33.9,
   "weather": "Сухо, 27 °C",
   "layout": {
    "points": [
@@ -5953,7 +5953,7 @@
   "laps": 57,
   "typicalLapSeconds": 90,
   "tyreWearFactor": 1.0,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 33.5,
   "weather": "Сухо, 29 °C",
   "layout": {
    "points": [
@@ -6456,7 +6456,7 @@
   "laps": 51,
   "typicalLapSeconds": 106,
   "tyreWearFactor": 0.75,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 37.5,
   "weather": "Вітряно, 23 °C",
   "layout": {
    "points": [
@@ -6815,7 +6815,7 @@
   "laps": 56,
   "typicalLapSeconds": 97,
   "tyreWearFactor": 1.3,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 32.4,
   "weather": "Волого, 32 °C",
   "layout": {
    "points": [
@@ -7282,7 +7282,7 @@
   "laps": 62,
   "typicalLapSeconds": 95,
   "tyreWearFactor": 0.9,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 32.1,
   "weather": "Ніч, волого, 29 °C",
   "layout": {
    "points": [
@@ -7701,7 +7701,7 @@
   "laps": 56,
   "typicalLapSeconds": 98,
   "tyreWearFactor": 1.15,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 33.5,
   "weather": "Сухо, 26 °C",
   "layout": {
    "points": [
@@ -8176,7 +8176,7 @@
   "laps": 71,
   "typicalLapSeconds": 81,
   "tyreWearFactor": 0.8,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 33.4,
   "weather": "Сухо, 22 °C",
   "layout": {
    "points": [
@@ -8567,7 +8567,7 @@
   "laps": 71,
   "typicalLapSeconds": 73,
   "tyreWearFactor": 1.0,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 28.4,
   "weather": "Хмарно, 21 °C",
   "layout": {
    "points": [
@@ -9106,7 +9106,7 @@
   "laps": 50,
   "typicalLapSeconds": 96,
   "tyreWearFactor": 0.7,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 34.7,
   "weather": "Ніч, 14 °C",
   "layout": {
    "points": [
@@ -9521,7 +9521,7 @@
   "laps": 57,
   "typicalLapSeconds": 85,
   "tyreWearFactor": 1.35,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 31.8,
   "weather": "Ніч, 27 °C",
   "layout": {
    "points": [
@@ -9964,7 +9964,7 @@
   "laps": 58,
   "typicalLapSeconds": 88,
   "tyreWearFactor": 0.95,
-  "pitLaneSeconds": 22,
+  "pitLaneSeconds": 32.0,
   "weather": "Сутінки, 28 °C",
   "layout": {
    "points": [
