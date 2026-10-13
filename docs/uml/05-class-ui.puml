@@ -5,6 +5,7 @@ title Діаграма класів — інтерфейс користувач�
 package "System.Windows.Forms" {
   class Form
   class Panel
+  class Control
 }
 
 package "System" {
@@ -48,6 +49,15 @@ package "F1RaceSimulator.WinForms" {
     +HitTest(point) : Car?
     +ColorOf(team) : Color
   }
+  class TelemetryPanel {
+    +SelectedCar : Car?
+    +Race : Race?
+    +TeamColor : Color
+    #OnPaint(e) : void
+    -DrawBar(g, rect, fraction, color) : void
+    -DrawZone(g, rect, min, max, from, to, color) : void
+    -DrawMarker(g, rect, min, max, value, color) : void
+  }
   class CarEventArgs {
     +Car : Car
   }
@@ -61,9 +71,11 @@ interface IRaceObserver
 Form <|-- MainForm
 Form <|-- ChampionshipForm
 Panel <|-- TrackPanel
+Control <|-- TelemetryPanel
 EventArgs <|-- CarEventArgs
 IRaceObserver <|.. MainForm
 MainForm *--> "1" TrackPanel
+MainForm *--> "1" TelemetryPanel : картка пілота
 TrackPanel *--> "1" TrackRenderer
 TrackPanel ..> CarEventArgs : <<create>>
 MainForm ..> ChampionshipForm : ShowDialog()

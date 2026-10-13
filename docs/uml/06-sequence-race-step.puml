@@ -8,6 +8,7 @@ participant ":MainForm" as Form
 participant ":Race" as Race
 participant ":Car" as Car
 participant ":Tyre" as Tyre
+participant ":PowerUnit\n:FuelTank\n:ErsBattery" as Parts
 participant ":IPitStrategy" as Strategy
 participant ":EventLogObserver" as Log
 participant ":TrackPanel" as Panel
@@ -18,11 +19,20 @@ activate Form
 Form -> Race : Step(realSeconds × timeScale)
 activate Race
 loop для кожного боліда на трасі
+  Race -> Race : ChooseDrivingMode(car, gapAhead, gapBehind)
   Race -> Car : Advance(laps, TyreWearFactor)
   activate Car
   Car -> Tyre : Wear(laps, trackFactor, driverFactor)
   Tyre --> Car
   deactivate Car
+  Race -> Car : UpdateSystems(context)
+  activate Car
+  Car -> Tyre : Update(context)
+  Car -> Parts : Update(context)
+  deactivate Car
+  opt перехід в економію (перегрів, мало палива)
+    Race -> Log : OnRaceEvent(TechnicalWarning)
+  end
   alt болід перетнув в'їзд у піт-лейн
     Race -> Strategy : ShouldPit(car, lapsRemaining, track)
     Strategy -> Tyre : Condition, WearPerLap

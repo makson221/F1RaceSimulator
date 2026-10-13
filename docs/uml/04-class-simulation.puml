@@ -21,7 +21,9 @@ package "Simulation" {
     +RunToFinish() : void
     +GapText(car : Car) : string
     +GetResults() : IReadOnlyList<RaceResult>
-    -UpdateOnTrack(car, dt) : void
+    -UpdateOnTrack(car, dt, gapAhead, gapBehind) : void
+    -ChooseDrivingMode(car, gapAhead, gapBehind) : void
+    -Warn(car, kind, message) : void
     -UpdateInPitLane(car, dt) : void
     -UpdatePitStop(car, dt) : void
     -UpdateStandings() : void
@@ -51,6 +53,7 @@ package "Simulation" {
     PitEntry
     PitStop
     Retirement
+    TechnicalWarning
     LeaderFinished
     RaceFinished
   }

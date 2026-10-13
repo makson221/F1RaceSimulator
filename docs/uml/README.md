@@ -11,5 +11,6 @@
 | `05-class-ui` | Класи: інтерфейс Windows Forms |
 | `06-sequence-race-step` | Послідовність: крок симуляції з піт-стопом |
 | `07-state-car` | Стани боліда |
+| `08-class-components` | Класи: компоненти боліда і телеметрія (шини, двигун, паливо, ERS) |
 
 Щоб перегенерувати зображення: `plantuml -charset UTF-8 -tpng *.puml` (або розширення PlantUML для VS Code / онлайн-редактор plantuml.com).

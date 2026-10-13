@@ -1,0 +1,136 @@
+@startuml class-components
+!include _style.iuml
+title Діаграма класів — компоненти боліда і телеметрія
+
+package "Components" {
+  abstract class CarComponent {
+    +{abstract} Name : string
+    +{abstract} Status : ComponentStatus
+    +{abstract} Level : double
+    +{abstract} Summary : string
+    +{abstract} Update(context : in ComponentContext) : void
+    #{static} Approach(value, target, seconds, timeConstant) : double
+  }
+  enum ComponentStatus {
+    Normal
+    Warning
+    Critical
+  }
+  class ComponentContext <<record struct>> {
+    +Seconds : double
+    +Laps : double
+    +AirTemperature : double
+    +Push : double
+    +InDirtyAir : bool
+    +IsRacing : bool
+  }
+  class PowerUnit {
+    +WarningTemperature = 120 °C
+    +CriticalTemperature = 130 °C
+    +Temperature : double {readOnly}
+    +Wear : double {readOnly}
+    +PaceFactor : double
+    +FailureRiskMultiplier : double
+    +TargetTemperature(context) : double
+    +Update(context) : void {override}
+  }
+  class FuelTank {
+    +KgPerKm = 0.27
+    +ReserveKg = 3
+    +CapacityKg : double {readOnly}
+    +FuelKg : double {readOnly}
+    +ConsumptionPerLap : double
+    +LapsLeft : double
+    +IsEmpty : bool
+    +LapTimePenaltySeconds : double
+    +FillForRace(laps, lapLengthKm) : void
+    +Update(context) : void {override}
+  }
+  note as PolyNote
+    Поліморфізм: Car.UpdateSystems викликає
+    Update(context) для кожного компонента,
+    а шини, двигун, паливо і батарея
+    реагують на той самий контекст по-різному.
+  end note
+  class ErsBattery {
+    +HarvestPerLap = 18 %
+    +DeployPerLap = 45 %
+    +Charge : double {readOnly}
+    +IsDeploying : bool {readOnly}
+    +PaceFactor : double
+    +Update(context) : void {override}
+  }
+}
+
+package "Tyres" {
+  abstract class Tyre {
+    +Condition : double
+    +Temperature : double
+    +OptimalMinTemperature : double
+    +OptimalMaxTemperature : double
+    +TemperaturePenalty : double
+    +OverheatWearFactor : double
+    +TargetTemperature(context) : double
+    +Update(context) : void {override}
+  }
+  class SoftTyre
+  class MediumTyre
+  class HardTyre
+}
+
+package "Simulation" {
+  class Car {
+    +Tyre : Tyre
+    +Engine : PowerUnit
+    +Fuel : FuelTank
+    +Battery : ErsBattery
+    +Components : IReadOnlyList<CarComponent>
+    +Mode : DrivingMode
+    +Push : double
+    +ModePaceFactor : double
+    +InDirtyAir : bool
+    +PrepareForRace(track, engineWear) : void
+    +UpdateSystems(context) : void
+  }
+  enum DrivingMode {
+    Saving
+    Normal
+    Attack
+    Defend
+  }
+  class Race {
+    -ChooseDrivingMode(car, gapAhead, gapBehind) : void
+    -Warn(car, kind, message) : void
+  }
+}
+
+package "WinForms" {
+  class TelemetryPanel {
+    +SelectedCar : Car?
+    #OnPaint(e) : void
+  }
+}
+
+CarComponent <|-- Tyre
+CarComponent <|-- PowerUnit
+CarComponent <|-- FuelTank
+CarComponent <|-- ErsBattery
+Tyre <|-- SoftTyre
+Tyre <|-- MediumTyre
+Tyre <|-- HardTyre
+CarComponent --> ComponentStatus
+CarComponent ..> ComponentContext : Update(...)
+
+Car *--> "1" Tyre
+Car *--> "1" PowerUnit
+Car *--> "1" FuelTank
+Car *--> "1" ErsBattery
+Car --> DrivingMode
+Race --> "1..*" Car : обирає режим,\nоновлює компоненти
+TelemetryPanel ..> Car : читає телеметрію
+
+note bottom of DrivingMode
+  Push: Saving 0.25, Normal 0.5,
+  Attack / Defend 1.0
+end note
+@enduml

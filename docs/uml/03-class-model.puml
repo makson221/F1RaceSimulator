@@ -1,6 +1,6 @@
 @startuml class-model
 !include _style.iuml
-title Діаграма класів — модель предметної області, шини та стратегії
+title Діаграма класів — модель предметної області, шини та стратегії\n(компоненти боліда детально — на діаграмі 08)
 
 package "Models" {
   class Team {
@@ -33,6 +33,7 @@ package "Models" {
     +TyreWearFactor : double
     +PitLaneSeconds : double
     +Weather : string
+    +AirTemperature : double
     +RaceDate : DateOnly?
   }
   class TrackLayout {
@@ -40,6 +41,8 @@ package "Models" {
     +PitLane : double[][]
     +PitEntry : double
     +PitExit : double
+    +Width : double
+    +Height : double
     +TrackPath : Polyline
     +PitLanePath : Polyline
     +PitSpan : double
@@ -67,30 +70,46 @@ package "Geometry" {
   }
 }
 
+package "Components" {
+  abstract class CarComponent {
+    +{abstract} Update(context) : void
+  }
+}
+
 package "Tyres" {
   abstract class Tyre {
     +{abstract} Compound : TyreCompound
     +{abstract} WearPerLap : double
     +{abstract} PaceBonus : double
+    +{abstract} OptimalMinTemperature : double
+    +{abstract} OptimalMaxTemperature : double
+    #{abstract} HeatingBias : double
     +Condition : double {readOnly}
+    +Temperature : double {readOnly}
     +LapsUsed : double {readOnly}
     +Letter : string
+    +CompoundName : string
+    +TemperaturePenalty : double
     +PaceMultiplier : double {virtual}
     +Wear(laps, trackFactor, driverFactor) : void
+    +Update(context) : void {override}
     +EstimatedLapsLeft(...) : double
   }
   class SoftTyre {
     +WearPerLap = 4.6
     +PaceBonus = +0.006
+    вікно 80–107 °C
     +PaceMultiplier : double {override}
   }
   class MediumTyre {
     +WearPerLap = 3.1
     +PaceBonus = 0
+    вікно 90–112 °C
   }
   class HardTyre {
     +WearPerLap = 2.1
     +PaceBonus = -0.005
+    вікно 90–116 °C
   }
   class TyreFactory <<static>> {
     +{static} Create(compound, condition) : Tyre
@@ -123,6 +142,10 @@ package "Simulation" {
     +Driver : Driver
     +Team : Team
     +Tyre : Tyre {readOnly}
+    +Engine : PowerUnit {readOnly}
+    +Fuel : FuelTank
+    +Battery : ErsBattery
+    +Mode : DrivingMode
     +Strategy : IPitStrategy
     +State : CarState {readOnly}
     +Distance : double {readOnly}
@@ -131,6 +154,8 @@ package "Simulation" {
     +RaceDistance : double
     +TyreWearRate : double
     +BasePace : double
+    +PrepareForRace(track, engineWear) : void
+    +UpdateSystems(context) : void
     +Advance(laps, trackWearFactor) : void
     +EnterPitLane(pitSpan, boxPosition) : void
     +MoveInPitLane(delta) : bool
@@ -149,6 +174,7 @@ package "Simulation" {
   }
 }
 
+CarComponent <|-- Tyre
 Tyre <|-- SoftTyre
 Tyre <|-- MediumTyre
 Tyre <|-- HardTyre
