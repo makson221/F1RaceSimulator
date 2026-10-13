@@ -160,6 +160,7 @@ public partial class MainForm : Form, IRaceObserver
             timerSim.Stop();
         }
         UpdateStartButtons();
+        RefreshStatus();
     }
 
     private void UpdateStartButtons()
@@ -294,33 +295,14 @@ public partial class MainForm : Form, IRaceObserver
         dgvStandings.ClearSelection();
     }
 
-    /// <summary>Картка обраного пілота.</summary>
+    /// <summary>Картка обраного пілота: телеметрія боліда (шини, двигун, паливо, ERS).</summary>
     private void RefreshDriverCard()
     {
-        if (_race == null || _selected == null) return;
-        Car car = _selected;
-
-        string status = car.State switch
-        {
-            CarState.OnTrack => "На трасі",
-            CarState.InPitLane => "Піт-лейн",
-            CarState.PitStop => $"Зупинка в боксі ({car.StopTimeRemaining:0.0} с)",
-            CarState.Finished => "Фінішував",
-            CarState.Retired => "Сход: " + car.RetirementReason,
-            _ => car.State.ToString()
-        };
-
-        lblDriverName.Text = $"{car.Driver.FullName} — {car.Team.Name}";
-        progressTyre.Value = Math.Clamp((int)Math.Round(car.Tyre.Condition), progressTyre.Minimum, progressTyre.Maximum);
-
-        lblDriverInfo.Text =
-            $"Позиція: {car.Position} з {_race.Cars.Count} (старт: {car.GridPosition}){Environment.NewLine}" +
-            $"Відрив: {_race.GapText(car)}{Environment.NewLine}" +
-            $"Статус: {status}{Environment.NewLine}" +
-            $"Шини: {car.Tyre.Name}, {car.Tyre.Condition:0}% (кіл на комплекті: {car.Tyre.LapsUsed:0}){Environment.NewLine}" +
-            $"Використані склади: {string.Join(" → ", car.UsedCompounds)}{Environment.NewLine}" +
-            $"Стратегія: {car.Strategy}{Environment.NewLine}" +
-            $"Піт-стопів: {car.PitStops}";
+        telemetryPanel.Race = _race;
+        telemetryPanel.SelectedCar = _selected;
+        if (_selected != null)
+            telemetryPanel.TeamColor = trackPanel.ColorOf(_selected.Team);
+        telemetryPanel.Invalidate();
     }
 
     private void RefreshStatus()

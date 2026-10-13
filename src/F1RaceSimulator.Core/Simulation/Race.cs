@@ -1,3 +1,4 @@
+using F1RaceSimulator.Core.Components;
 using F1RaceSimulator.Core.Models;
 using F1RaceSimulator.Core.Tyres;
 
@@ -17,6 +18,15 @@ public sealed class Race
     /// <summary>Максимальний крок симуляції, секунди. Великі кроки діляться на менші.</summary>
     public const double MaxStepSeconds = 1.0;
 
+    /// <summary>Відставання від суперника, при якому болід потрапляє в турбулентне повітря, секунди.</summary>
+    public const double DirtyAirGapSeconds = 1.0;
+
+    /// <summary>Втрата темпу в турбулентному повітрі (менше притискної сили): 0.25 %.</summary>
+    public const double DirtyAirPaceFactor = 0.9975;
+
+    /// <summary>Повторне попередження того самого типу для пілота — не частіше ніж раз на стільки кіл.</summary>
+    public const int WarningIntervalLaps = 10;
+
     private static readonly string[] RetirementReasons =
     {
         "відмова силової установки",
@@ -32,6 +42,7 @@ public sealed class Race
     private readonly IRandomSource _random;
     private readonly Dictionary<Car, PaceNoise> _noise = new();
     private readonly Dictionary<(string, string), double> _lastOvertake = new();
+    private readonly Dictionary<(string Code, string Kind), double> _warningTimes = new();
     private List<Car> _standings;
     private int _leaderLapsAnnounced;
 
@@ -115,6 +126,9 @@ public sealed class Race
             // Кожна наступна позиція на решітці приблизно на 8 метрів позаду.
             car.PlaceOnGrid(i + 1, -0.0005 - 0.0015 * i);
 
+            // Паливо на всю дистанцію; двигун уже пройшов кілька етапів сезону (знос 5–40 %).
+            car.PrepareForRace(Track, engineWear: 5 + _random.NextDouble() * 35);
+
             double period = 60 + _random.NextDouble() * 90;             // 60–150 секунд
             _noise[car] = new PaceNoise(
                 Phase: _random.NextDouble() * 2 * Math.PI,
@@ -165,12 +179,24 @@ public sealed class Race
     {
         ElapsedSeconds += dt;
 
+        // Відставання від суперника попереду і відрив від суперника позаду (для режимів атаки й захисту).
+        var gapAhead = new Dictionary<Car, double>();
+        var gapBehind = new Dictionary<Car, double>();
+        for (int i = 0; i < _standings.Count; i++)
+        {
+            Car car = _standings[i];
+            gapAhead[car] = GapToCar(_standings, i - 1, car);
+            gapBehind[car] = i + 1 < _standings.Count && _standings[i + 1].State == CarState.OnTrack
+                ? (car.RaceDistance - _standings[i + 1].RaceDistance) * Track.TypicalLapSeconds
+                : double.PositiveInfinity;
+        }
+
         foreach (var car in _cars)
         {
             switch (car.State)
             {
                 case CarState.OnTrack:
-                    UpdateOnTrack(car, dt);
+                    UpdateOnTrack(car, dt, gapAhead[car], gapBehind[car]);
                     break;
                 case CarState.InPitLane:
                     UpdateInPitLane(car, dt);
@@ -192,29 +218,56 @@ public sealed class Race
         }
     }
 
-    private void UpdateOnTrack(Car car, double dt)
+    /// <summary>Відставання боліда від суперника з індексом <paramref name="aheadIndex"/>, секунди.</summary>
+    private double GapToCar(List<Car> standings, int aheadIndex, Car car) =>
+        aheadIndex < 0 || standings[aheadIndex].State != CarState.OnTrack
+            ? double.PositiveInfinity
+            : (standings[aheadIndex].RaceDistance - car.RaceDistance) * Track.TypicalLapSeconds;
+
+    private void UpdateOnTrack(Car car, double dt, double gapAheadSeconds, double gapBehindSeconds)
     {
+        ChooseDrivingMode(car, gapAheadSeconds, gapBehindSeconds);
+
+        // Темп: пілот і болід, шини (знос і температура), двигун, ERS, режим їзди,
+        // турбулентне повітря і плавне коливання форми.
         var noise = _noise[car];
-        double pace = car.BasePace * car.Tyre.PaceMultiplier
+        double pace = car.BasePace
+                      * car.Tyre.PaceMultiplier
+                      * car.Engine.PaceFactor
+                      * car.Battery.PaceFactor
+                      * car.ModePaceFactor
+                      * (car.InDirtyAir ? DirtyAirPaceFactor : 1)
                       * (1 + noise.Amplitude * Math.Sin(ElapsedSeconds * noise.Omega + noise.Phase));
-        double lapTime = Track.TypicalLapSeconds / pace;
+        double lapTime = Track.TypicalLapSeconds / pace + car.Fuel.LapTimePenaltySeconds;
         double lapsDelta = dt / lapTime;
 
         double before = car.Distance;
         car.Advance(lapsDelta, Track.TyreWearFactor);
+        car.UpdateSystems(new ComponentContext(dt, lapsDelta, Track.AirTemperature, car.Push, car.InDirtyAir, IsRacing: true));
 
-        // Технічний сход: нестабільні пілоти ризикують трохи більше.
-        double chance = RetirementChancePerLap * lapsDelta * (2 - car.Driver.Consistency);
+        // Спочатку перетин лінії: болід, що доїхав до фінішу на останніх краплях палива, фінішує.
+        HandleLineCrossing(car, before, car.Distance, dt);
+        if (car.State != CarState.OnTrack) return;
+
+        if (car.Fuel.IsEmpty)
+        {
+            car.Retire("закінчилося паливо");
+            Notify(RaceEventType.Retirement, $"{car.Driver.FullName} — сход (закінчилося паливо).", car);
+            return;
+        }
+
+        // Технічний сход: ризик зростає зі зносом і перегрівом двигуна, нестабільні пілоти ризикують більше.
+        double chance = RetirementChancePerLap * lapsDelta * (2 - car.Driver.Consistency) * car.Engine.FailureRiskMultiplier;
         if (car.Distance > 0 && _random.NextDouble() < chance)
         {
-            string reason = RetirementReasons[(int)(_random.NextDouble() * RetirementReasons.Length) % RetirementReasons.Length];
+            bool engineFault = car.Engine.Wear >= 60 || car.Engine.Temperature >= PowerUnit.CriticalTemperature;
+            string reason = engineFault
+                ? RetirementReasons[0]
+                : RetirementReasons[(int)(_random.NextDouble() * RetirementReasons.Length) % RetirementReasons.Length];
             car.Retire(reason);
             Notify(RaceEventType.Retirement, $"{car.Driver.FullName} — сход ({reason}).", car);
             return;
         }
-
-        HandleLineCrossing(car, before, car.Distance, dt);
-        if (car.State != CarState.OnTrack) return;
 
         // В'їзд у піт-лейн: стратегія пілота вирішує, чи заїжджати.
         if (!IsChequeredFlag && car.Distance > 0.5 && Crossed(before, car.Distance, Track.Layout.PitEntry))
@@ -229,8 +282,60 @@ public sealed class Race
         }
     }
 
+    /// <summary>
+    /// Обирає режим їзди. Економія — якщо перегріваються шини чи двигун або не вистачає палива
+    /// (з гістерезисом: щоб вийти з економії, показники мають повернутися в норму із запасом).
+    /// Атака — якщо суперник попереду ближче ніж за секунду; захист — якщо суперник позаду
+    /// ближче ніж за секунду (обидва — з другого кола). Інакше — рівний темп.
+    /// Перехід в економію записується в журнал.
+    /// </summary>
+    private void ChooseDrivingMode(Car car, double gapAheadSeconds, double gapBehindSeconds)
+    {
+        bool saving = car.Mode == DrivingMode.Saving;
+        double lapsToGo = Math.Max(0, TotalLaps - car.Distance);
+
+        // Команда тримає запас палива 0.2 кола; вийти з економії можна із запасом 0.5 кола.
+        double fuelMargin = car.Fuel.LapsLeft - lapsToGo;
+        bool fuelShort = car.Fuel.CapacityKg > 0 && fuelMargin < (saving ? 0.5 : 0.2);
+        bool tyresHot = car.Tyre.Temperature > car.Tyre.OptimalMaxTemperature + (saving ? 0 : 5);
+        bool engineHot = car.Engine.Temperature >= PowerUnit.WarningTemperature - (saving ? 5 : 0);
+
+        car.InDirtyAir = gapAheadSeconds < DirtyAirGapSeconds;
+        bool racing = car.Distance >= 1;
+        DrivingMode mode = fuelShort || tyresHot || engineHot ? DrivingMode.Saving
+            : racing && car.InDirtyAir ? DrivingMode.Attack
+            : racing && gapBehindSeconds < DirtyAirGapSeconds ? DrivingMode.Defend
+            : DrivingMode.Normal;
+
+        if (mode == DrivingMode.Saving && !saving && car.Distance >= 1)
+        {
+            string name = car.Driver.FullName;
+            if (engineHot)
+                Warn(car, "engine", $"{name}: двигун перегрівся до {car.Engine.Temperature:0} °C, пілот знижує темп.");
+            else if (tyresHot)
+                Warn(car, "tyres", $"{name}: перегрів шин {car.Tyre.CompoundName} ({car.Tyre.Temperature:0} °C), пілот береже гуму.");
+            else
+                Warn(car, "fuel", $"{name} економить паливо: {car.Fuel.FuelKg:0.0} кг на {UkrainianText.Laps((int)Math.Ceiling(lapsToGo))}.");
+        }
+        car.Mode = mode;
+    }
+
+    /// <summary>
+    /// Надсилає технічне попередження. Одне й те саме попередження для пілота
+    /// повторюється не частіше ніж раз на <see cref="WarningIntervalLaps"/> кіл.
+    /// </summary>
+    private void Warn(Car car, string kind, string message)
+    {
+        var key = (car.Driver.Code, kind);
+        double interval = WarningIntervalLaps * Track.TypicalLapSeconds;
+        if (_warningTimes.TryGetValue(key, out double last) && ElapsedSeconds - last < interval) return;
+        _warningTimes[key] = ElapsedSeconds;
+        Notify(RaceEventType.TechnicalWarning, message, car);
+    }
+
     private void UpdateInPitLane(Car car, double dt)
     {
+        car.UpdateSystems(new ComponentContext(dt, 0, Track.AirTemperature, 0, false, IsRacing: false));
         double before = car.RaceDistance;
         bool reachedBox = car.MoveInPitLane(dt / Track.PitLaneSeconds);
         if (reachedBox)
@@ -244,6 +349,7 @@ public sealed class Race
 
     private void UpdatePitStop(Car car, double dt)
     {
+        car.UpdateSystems(new ComponentContext(dt, 0, Track.AirTemperature, 0, false, IsRacing: false));
         if (!car.TickStop(dt)) return;
 
         int lapsRemaining = Math.Max(1, TotalLaps - car.CompletedLaps);
@@ -252,7 +358,7 @@ public sealed class Race
         car.ChangeTyres(TyreFactory.Create(compound));
 
         Notify(RaceEventType.PitStop,
-            $"{car.Driver.FullName} — піт-стоп {car.LastStopDuration:0.0} с, {oldTyre.Name} → {car.Tyre.Name}.", car);
+            $"{car.Driver.FullName} — піт-стоп {car.LastStopDuration:0.0} с, {oldTyre.CompoundName} → {car.Tyre.CompoundName}.", car);
     }
 
     /// <summary>Перетин лінії старту/фінішу: завершене коло або фініш.</summary>

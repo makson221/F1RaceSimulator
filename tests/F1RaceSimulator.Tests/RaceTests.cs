@@ -136,4 +136,47 @@ public class RaceTests
     {
         Assert.Equal("1:21.345", QualifyingResult.FormatLapTime(81.345));
     }
+
+    [Fact]
+    public void Finishers_HaveFuelLeft_AndEnginesWore()
+    {
+        var (race, log) = RunRace("hu-1986", seed: 6);       // спекотний етап, 32 °C
+
+        Assert.All(race.Cars, car =>
+        {
+            Assert.Equal(CarState.Finished, car.State);
+            Assert.True(car.Fuel.FuelKg > 0 && car.Fuel.FuelKg < car.Fuel.CapacityKg, car.Driver.Code);
+            Assert.True(car.Engine.Wear > 5, car.Driver.Code);
+        });
+        Assert.True(log.Count(RaceEventType.TechnicalWarning) <= 2 * race.Cars.Count);
+    }
+
+    [Fact]
+    public void CloseCars_FollowerAttacks_LeaderDefends()
+    {
+        var track = TestHelpers.SquareTrack(laps: 20);
+        var first = TestHelpers.TestCar(code: "AAA");
+        var second = TestHelpers.TestCar(code: "BBB");
+        var race = new Race(track, new[] { first, second }, new FixedRandomSource(0.5), retirementChancePerLap: 0);
+        race.Start();
+
+        while (race.Leader.Distance < 1.5)
+            race.Step(1);
+
+        Car leader = race.Standings[0], follower = race.Standings[1];
+        Assert.True(follower.InDirtyAir);
+        Assert.Equal(DrivingMode.Attack, follower.Mode);
+        Assert.Equal(DrivingMode.Defend, leader.Mode);
+        Assert.True(follower.Battery.Charge < 100);              // в атаці батарея віддає енергію
+    }
+
+    [Fact]
+    public void Tracks_HaveAirTemperatureFromWeather()
+    {
+        Assert.All(TestHelpers.Season.Tracks, track =>
+        {
+            Assert.True(track.AirTemperature is >= 10 and <= 40, track.Id);
+            Assert.True(track.Weather.Contains($"{track.AirTemperature:0} °C"), track.Id);
+        });
+    }
 }

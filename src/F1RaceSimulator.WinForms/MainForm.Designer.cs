@@ -68,9 +68,7 @@ namespace F1RaceSimulator.WinForms
             this.trackPanel = new F1RaceSimulator.WinForms.TrackPanel();
             this.splitBottom = new System.Windows.Forms.SplitContainer();
             this.grpDriver = new System.Windows.Forms.GroupBox();
-            this.lblDriverInfo = new System.Windows.Forms.Label();
-            this.progressTyre = new System.Windows.Forms.ProgressBar();
-            this.lblDriverName = new System.Windows.Forms.Label();
+            this.telemetryPanel = new F1RaceSimulator.WinForms.TelemetryPanel();
             this.grpLog = new System.Windows.Forms.GroupBox();
             this.lstLog = new System.Windows.Forms.ListBox();
             this.grpStandings = new System.Windows.Forms.GroupBox();
@@ -351,8 +349,8 @@ namespace F1RaceSimulator.WinForms
             this.tableLeft.Location = new System.Drawing.Point(6, 6);
             this.tableLeft.Name = "tableLeft";
             this.tableLeft.RowCount = 2;
-            this.tableLeft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 64F));
-            this.tableLeft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 36F));
+            this.tableLeft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 59F));
+            this.tableLeft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 41F));
             this.tableLeft.Size = new System.Drawing.Size(714, 689);
             this.tableLeft.TabIndex = 0;
             //
@@ -387,46 +385,27 @@ namespace F1RaceSimulator.WinForms
             // splitBottom.Panel2
             //
             this.splitBottom.Panel2.Controls.Add(this.grpLog);
-            this.splitBottom.Size = new System.Drawing.Size(708, 242);
-            this.splitBottom.SplitterDistance = 300;
+            this.splitBottom.Size = new System.Drawing.Size(708, 276);
+            this.splitBottom.SplitterDistance = 390;
             this.splitBottom.SplitterWidth = 6;
             this.splitBottom.TabIndex = 1;
             //
             // grpDriver
             //
-            this.grpDriver.Controls.Add(this.lblDriverInfo);
-            this.grpDriver.Controls.Add(this.progressTyre);
-            this.grpDriver.Controls.Add(this.lblDriverName);
+            this.grpDriver.Controls.Add(this.telemetryPanel);
             this.grpDriver.Dock = System.Windows.Forms.DockStyle.Fill;
             this.grpDriver.Name = "grpDriver";
-            this.grpDriver.Padding = new System.Windows.Forms.Padding(8);
+            this.grpDriver.Padding = new System.Windows.Forms.Padding(6);
             this.grpDriver.TabIndex = 0;
             this.grpDriver.TabStop = false;
-            this.grpDriver.Text = "Обраний пілот";
+            this.grpDriver.Text = "Обраний пілот — телеметрія";
             //
-            // lblDriverInfo
+            // telemetryPanel
             //
-            this.lblDriverInfo.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.lblDriverInfo.Name = "lblDriverInfo";
-            this.lblDriverInfo.Padding = new System.Windows.Forms.Padding(0, 6, 0, 0);
-            this.lblDriverInfo.TabIndex = 2;
-            this.lblDriverInfo.Text = "—";
-            //
-            // progressTyre
-            //
-            this.progressTyre.Dock = System.Windows.Forms.DockStyle.Top;
-            this.progressTyre.Name = "progressTyre";
-            this.progressTyre.Size = new System.Drawing.Size(284, 14);
-            this.progressTyre.TabIndex = 1;
-            //
-            // lblDriverName
-            //
-            this.lblDriverName.Dock = System.Windows.Forms.DockStyle.Top;
-            this.lblDriverName.Font = new System.Drawing.Font("Segoe UI", 11F, System.Drawing.FontStyle.Bold);
-            this.lblDriverName.Name = "lblDriverName";
-            this.lblDriverName.Size = new System.Drawing.Size(284, 28);
-            this.lblDriverName.TabIndex = 0;
-            this.lblDriverName.Text = "—";
+            this.telemetryPanel.BackColor = System.Drawing.Color.White;
+            this.telemetryPanel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.telemetryPanel.Name = "telemetryPanel";
+            this.telemetryPanel.TabIndex = 0;
             //
             // grpLog
             //
@@ -617,9 +596,7 @@ namespace F1RaceSimulator.WinForms
         private F1RaceSimulator.WinForms.TrackPanel trackPanel;
         private System.Windows.Forms.SplitContainer splitBottom;
         private System.Windows.Forms.GroupBox grpDriver;
-        private System.Windows.Forms.Label lblDriverInfo;
-        private System.Windows.Forms.ProgressBar progressTyre;
-        private System.Windows.Forms.Label lblDriverName;
+        private F1RaceSimulator.WinForms.TelemetryPanel telemetryPanel;
         private System.Windows.Forms.GroupBox grpLog;
         private System.Windows.Forms.ListBox lstLog;
         private System.Windows.Forms.GroupBox grpStandings;

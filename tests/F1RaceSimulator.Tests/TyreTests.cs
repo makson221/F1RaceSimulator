@@ -70,7 +70,7 @@ public class TyreTests
     {
         // Поліморфізм: SoftTyre перевизначає PaceMultiplier.
         var soft = new SoftTyre(15);
-        double withoutCliff = 1 + soft.PaceBonus - Tyre.PaceLossWhenWorn * (1 - 15 / 100.0);
+        double withoutCliff = 1 + soft.PaceBonus - Tyre.PaceLossWhenWorn * (1 - 15 / 100.0) - soft.TemperaturePenalty;
         Assert.Equal(withoutCliff - 0.01, soft.PaceMultiplier, precision: 9);
     }
 

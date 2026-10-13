@@ -9,6 +9,7 @@ public enum RaceEventType
     PitEntry,
     PitStop,
     Retirement,
+    TechnicalWarning,
     LeaderFinished,
     RaceFinished
 }

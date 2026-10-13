@@ -44,6 +44,9 @@ public sealed class Track
     /// <summary>Погода на етапі (текст для інтерфейсу).</summary>
     public string Weather { get; init; } = string.Empty;
 
+    /// <summary>Температура повітря, °C. Впливає на нагрів шин і двигуна.</summary>
+    public double AirTemperature { get; init; } = 25;
+
     /// <summary>Геометрія схеми траси.</summary>
     public TrackLayout Layout { get; init; } = new();
 
@@ -58,8 +61,9 @@ public sealed class Track
 }
 
 /// <summary>
-/// Геометрія траси у власній системі координат (за замовчуванням 340 × 205).
-/// Точки побудовані за реальними GPS-координатами трас (набір даних f1-circuits).
+/// Геометрія траси у власній системі координат. Точки побудовані за реальними
+/// GPS-координатами трас (набір даних f1-circuits) і орієнтовані як на карті: північ угорі.
+/// Розмір системи координат (<see cref="Width"/> × <see cref="Height"/>) залежить від форми траси.
 /// </summary>
 public sealed class TrackLayout
 {

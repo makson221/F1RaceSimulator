@@ -19,6 +19,14 @@ public sealed class SoftTyre : Tyre
 
     public override double PaceBonus => 0.006;
 
+    /// <summary>Робочий діапазон температури: 80–107 °C (умовна модель).</summary>
+    public override double OptimalMinTemperature => 80;
+
+    public override double OptimalMaxTemperature => 107;
+
+    /// <summary>М'який склад гріється на 2 °C сильніше за середній.</summary>
+    protected override double HeatingBias => 2;
+
     /// <summary>
     /// Перевизначений множник темпу: додаткова втрата 1 % при стані нижче 20 %.
     /// Приклад поліморфізму: той самий виклик дає іншу поведінку.

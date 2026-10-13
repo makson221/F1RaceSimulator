@@ -1,3 +1,4 @@
+using F1RaceSimulator.Core.Components;
 using F1RaceSimulator.Core.Models;
 using F1RaceSimulator.Core.Strategies;
 using F1RaceSimulator.Core.Tyres;
@@ -24,6 +25,9 @@ public sealed class Car
         Tyre = startTyre ?? throw new ArgumentNullException(nameof(startTyre));
         Strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
         _usedCompounds.Add(startTyre.Compound);
+        Engine = new PowerUnit();
+        Fuel = new FuelTank();
+        Battery = new ErsBattery();
     }
 
     public Driver Driver { get; }
@@ -35,6 +39,46 @@ public sealed class Car
 
     /// <summary>Стратегія піт-стопів (можна замінити під час гонки).</summary>
     public IPitStrategy Strategy { get; set; }
+
+    /// <summary>Силова установка: температура і знос.</summary>
+    public PowerUnit Engine { get; private set; }
+
+    /// <summary>Паливний бак.</summary>
+    public FuelTank Fuel { get; }
+
+    /// <summary>Батарея системи рекуперації енергії.</summary>
+    public ErsBattery Battery { get; }
+
+    /// <summary>
+    /// Усі компоненти боліда. Гонка оновлює їх однаковим викликом <see cref="CarComponent.Update"/>,
+    /// а кожен компонент реагує по-своєму (поліморфізм).
+    /// </summary>
+    public IReadOnlyList<CarComponent> Components => new CarComponent[] { Tyre, Engine, Fuel, Battery };
+
+    /// <summary>Поточний режим їзди: економія, рівний темп або атака.</summary>
+    public DrivingMode Mode { get; internal set; } = DrivingMode.Normal;
+
+    /// <summary>Інтенсивність їзди для поточного режиму (0.25 — економія, 0.5 — рівний темп, 1 — боротьба).</summary>
+    public double Push => Mode switch
+    {
+        DrivingMode.Saving => 0.25,
+        DrivingMode.Attack or DrivingMode.Defend => 1.0,
+        _ => 0.5
+    };
+
+    /// <summary>
+    /// Вплив режиму на темп: економія (lift and coast) коштує 0.4 %, боротьба додає 0.05 %.
+    /// Головний приріст в атаці й захисті дає батарея ERS (<see cref="ErsBattery.PaceFactor"/>).
+    /// </summary>
+    public double ModePaceFactor => Mode switch
+    {
+        DrivingMode.Saving => 0.996,
+        DrivingMode.Attack or DrivingMode.Defend => 1.0005,
+        _ => 1.0
+    };
+
+    /// <summary>Болід їде менш ніж за секунду позаду суперника (турбулентне повітря).</summary>
+    public bool InDirtyAir { get; internal set; }
 
     public CarState State { get; private set; } = CarState.OnTrack;
 
@@ -105,6 +149,23 @@ public sealed class Car
     /// Базовий темп боліда (1.0 — найшвидший). Половину різниці дає пілот, половину — болід.
     /// </summary>
     public double BasePace => (1 - (1 - Driver.Pace) * 0.5) * (1 - (1 - Team.CarPerformance) * 0.5);
+
+    /// <summary>
+    /// Готує болід до гонки: заправляє паливо на всю дистанцію і ставить двигун із заданим зносом.
+    /// </summary>
+    public void PrepareForRace(Track track, double engineWear)
+    {
+        ArgumentNullException.ThrowIfNull(track);
+        Fuel.FillForRace(track.Laps, track.LengthKm);
+        Engine = new PowerUnit(engineWear);
+    }
+
+    /// <summary>Оновлює всі компоненти боліда (температури, паливо, заряд ERS).</summary>
+    public void UpdateSystems(in ComponentContext context)
+    {
+        foreach (CarComponent component in Components)
+            component.Update(context);
+    }
 
     /// <summary>Розставляє болід на стартовій решітці.</summary>
     internal void PlaceOnGrid(int gridPosition, double distance)
