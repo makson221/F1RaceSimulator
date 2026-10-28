@@ -41,6 +41,8 @@ namespace F1RaceSimulator.WinForms
             this.mnuRace = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuStartPause = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuRestart = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuSkipQualifying = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuNextRound = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuSeason = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuStandings = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuResetSeason = new System.Windows.Forms.ToolStripMenuItem();
@@ -49,6 +51,8 @@ namespace F1RaceSimulator.WinForms
             this.toolStrip = new System.Windows.Forms.ToolStrip();
             this.tsbStartPause = new System.Windows.Forms.ToolStripButton();
             this.tsbRestart = new System.Windows.Forms.ToolStripButton();
+            this.tsbSkipQualifying = new System.Windows.Forms.ToolStripButton();
+            this.tsbNextRound = new System.Windows.Forms.ToolStripButton();
             this.tsSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.tslSpeed = new System.Windows.Forms.ToolStripLabel();
             this.tscSpeed = new System.Windows.Forms.ToolStripComboBox();
@@ -57,6 +61,8 @@ namespace F1RaceSimulator.WinForms
             this.tscTrack = new System.Windows.Forms.ToolStripComboBox();
             this.tsSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.tslWeather = new System.Windows.Forms.ToolStripLabel();
+            this.tsSeparator4 = new System.Windows.Forms.ToolStripSeparator();
+            this.tslSession = new System.Windows.Forms.ToolStripLabel();
             this.statusStrip = new System.Windows.Forms.StatusStrip();
             this.tsslLap = new System.Windows.Forms.ToolStripStatusLabel();
             this.tsslLeader = new System.Windows.Forms.ToolStripStatusLabel();
@@ -71,7 +77,14 @@ namespace F1RaceSimulator.WinForms
             this.telemetryPanel = new F1RaceSimulator.WinForms.TelemetryPanel();
             this.grpLog = new System.Windows.Forms.GroupBox();
             this.lstLog = new System.Windows.Forms.ListBox();
-            this.grpStandings = new System.Windows.Forms.GroupBox();
+            this.tabRight = new System.Windows.Forms.TabControl();
+            this.tabPositions = new System.Windows.Forms.TabPage();
+            this.tabTelemetry = new System.Windows.Forms.TabPage();
+            this.tabSeason = new System.Windows.Forms.TabPage();
+            this.dgvQualifying = new System.Windows.Forms.DataGridView();
+            this.dgvTelemetry = new System.Windows.Forms.DataGridView();
+            this.dgvSeason = new System.Windows.Forms.DataGridView();
+            this.lblSeason = new System.Windows.Forms.Label();
             this.dgvStandings = new System.Windows.Forms.DataGridView();
             this.colColor = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colPos = new System.Windows.Forms.DataGridViewTextBoxColumn();
@@ -80,6 +93,7 @@ namespace F1RaceSimulator.WinForms
             this.colGap = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colTyre = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.colPits = new System.Windows.Forms.DataGridViewTextBoxColumn();
+            this.colPoints = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.timerSim = new System.Windows.Forms.Timer(this.components);
             this.menuStrip.SuspendLayout();
             this.toolStrip.SuspendLayout();
@@ -96,8 +110,14 @@ namespace F1RaceSimulator.WinForms
             this.splitBottom.SuspendLayout();
             this.grpDriver.SuspendLayout();
             this.grpLog.SuspendLayout();
-            this.grpStandings.SuspendLayout();
+            this.tabRight.SuspendLayout();
+            this.tabPositions.SuspendLayout();
+            this.tabTelemetry.SuspendLayout();
+            this.tabSeason.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvStandings)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvQualifying)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvTelemetry)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvSeason)).BeginInit();
             this.SuspendLayout();
             //
             // menuStrip
@@ -109,7 +129,7 @@ namespace F1RaceSimulator.WinForms
             this.mnuHelp});
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
-            this.menuStrip.Size = new System.Drawing.Size(1280, 24);
+            this.menuStrip.Size = new System.Drawing.Size(1366, 24);
             this.menuStrip.TabIndex = 0;
             //
             // mnuFile
@@ -150,7 +170,9 @@ namespace F1RaceSimulator.WinForms
             //
             this.mnuRace.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mnuStartPause,
-            this.mnuRestart});
+            this.mnuRestart,
+            this.mnuSkipQualifying,
+            this.mnuNextRound});
             this.mnuRace.Name = "mnuRace";
             this.mnuRace.Text = "&Гонка";
             //
@@ -165,8 +187,22 @@ namespace F1RaceSimulator.WinForms
             //
             this.mnuRestart.Name = "mnuRestart";
             this.mnuRestart.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.R)));
-            this.mnuRestart.Text = "Почати знову";
+            this.mnuRestart.Text = "Почати вікенд знову";
             this.mnuRestart.Click += new System.EventHandler(this.Restart_Click);
+            //
+            // mnuSkipQualifying
+            //
+            this.mnuSkipQualifying.Name = "mnuSkipQualifying";
+            this.mnuSkipQualifying.ShortcutKeys = System.Windows.Forms.Keys.F6;
+            this.mnuSkipQualifying.Text = "Пропустити кваліфікацію";
+            this.mnuSkipQualifying.Click += new System.EventHandler(this.SkipQualifying_Click);
+            //
+            // mnuNextRound
+            //
+            this.mnuNextRound.Name = "mnuNextRound";
+            this.mnuNextRound.ShortcutKeys = System.Windows.Forms.Keys.F7;
+            this.mnuNextRound.Text = "Наступний етап";
+            this.mnuNextRound.Click += new System.EventHandler(this.NextRound_Click);
             //
             // mnuSeason
             //
@@ -208,6 +244,8 @@ namespace F1RaceSimulator.WinForms
             this.toolStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.tsbStartPause,
             this.tsbRestart,
+            this.tsbSkipQualifying,
+            this.tsbNextRound,
             this.tsSeparator1,
             this.tslSpeed,
             this.tscSpeed,
@@ -215,11 +253,13 @@ namespace F1RaceSimulator.WinForms
             this.tslTrack,
             this.tscTrack,
             this.tsSeparator3,
-            this.tslWeather});
+            this.tslWeather,
+            this.tsSeparator4,
+            this.tslSession});
             this.toolStrip.Location = new System.Drawing.Point(0, 24);
             this.toolStrip.Name = "toolStrip";
             this.toolStrip.Padding = new System.Windows.Forms.Padding(6, 2, 6, 2);
-            this.toolStrip.Size = new System.Drawing.Size(1280, 31);
+            this.toolStrip.Size = new System.Drawing.Size(1366, 31);
             this.toolStrip.TabIndex = 1;
             //
             // tsbStartPause
@@ -234,8 +274,23 @@ namespace F1RaceSimulator.WinForms
             //
             this.tsbRestart.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
             this.tsbRestart.Name = "tsbRestart";
-            this.tsbRestart.Text = "⟲ Почати знову";
+            this.tsbRestart.Text = "⟲ Знову";
+            this.tsbRestart.ToolTipText = "Почати вікенд знову: нова кваліфікація і гонка";
             this.tsbRestart.Click += new System.EventHandler(this.Restart_Click);
+            //
+            // tsbSkipQualifying
+            //
+            this.tsbSkipQualifying.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.tsbSkipQualifying.Name = "tsbSkipQualifying";
+            this.tsbSkipQualifying.Text = "⏭ Пропустити кваліфікацію";
+            this.tsbSkipQualifying.Click += new System.EventHandler(this.SkipQualifying_Click);
+            //
+            // tsbNextRound
+            //
+            this.tsbNextRound.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.tsbNextRound.Name = "tsbNextRound";
+            this.tsbNextRound.Text = "Наступний етап ▶";
+            this.tsbNextRound.Click += new System.EventHandler(this.NextRound_Click);
             //
             // tsSeparator1
             //
@@ -269,7 +324,7 @@ namespace F1RaceSimulator.WinForms
             this.tscTrack.DropDownWidth = 360;
             this.tscTrack.MaxDropDownItems = 24;
             this.tscTrack.Name = "tscTrack";
-            this.tscTrack.Size = new System.Drawing.Size(330, 27);
+            this.tscTrack.Size = new System.Drawing.Size(290, 27);
             this.tscTrack.SelectedIndexChanged += new System.EventHandler(this.TscTrack_SelectedIndexChanged);
             //
             // tsSeparator3
@@ -281,6 +336,17 @@ namespace F1RaceSimulator.WinForms
             this.tslWeather.Name = "tslWeather";
             this.tslWeather.Text = "Погода: —";
             //
+            // tsSeparator4
+            //
+            this.tsSeparator4.Name = "tsSeparator4";
+            //
+            // tslSession
+            //
+            this.tslSession.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.tslSession.ForeColor = System.Drawing.Color.FromArgb(10, 98, 191);
+            this.tslSession.Name = "tslSession";
+            this.tslSession.Text = "Кваліфікація";
+            //
             // statusStrip
             //
             this.statusStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
@@ -288,9 +354,9 @@ namespace F1RaceSimulator.WinForms
             this.tsslLeader,
             this.tsslPits,
             this.tsslState});
-            this.statusStrip.Location = new System.Drawing.Point(0, 756);
+            this.statusStrip.Location = new System.Drawing.Point(0, 816);
             this.statusStrip.Name = "statusStrip";
-            this.statusStrip.Size = new System.Drawing.Size(1280, 24);
+            this.statusStrip.Size = new System.Drawing.Size(1366, 24);
             this.statusStrip.TabIndex = 3;
             //
             // tsslLap
@@ -332,10 +398,10 @@ namespace F1RaceSimulator.WinForms
             //
             // splitMain.Panel2
             //
-            this.splitMain.Panel2.Controls.Add(this.grpStandings);
+            this.splitMain.Panel2.Controls.Add(this.tabRight);
             this.splitMain.Panel2.Padding = new System.Windows.Forms.Padding(0, 6, 6, 6);
-            this.splitMain.Size = new System.Drawing.Size(1280, 701);
-            this.splitMain.SplitterDistance = 720;
+            this.splitMain.Size = new System.Drawing.Size(1366, 761);
+            this.splitMain.SplitterDistance = 700;
             this.splitMain.SplitterWidth = 6;
             this.splitMain.TabIndex = 2;
             //
@@ -349,8 +415,8 @@ namespace F1RaceSimulator.WinForms
             this.tableLeft.Location = new System.Drawing.Point(6, 6);
             this.tableLeft.Name = "tableLeft";
             this.tableLeft.RowCount = 2;
-            this.tableLeft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 59F));
-            this.tableLeft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 41F));
+            this.tableLeft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 56F));
+            this.tableLeft.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 44F));
             this.tableLeft.Size = new System.Drawing.Size(714, 689);
             this.tableLeft.TabIndex = 0;
             //
@@ -386,7 +452,7 @@ namespace F1RaceSimulator.WinForms
             //
             this.splitBottom.Panel2.Controls.Add(this.grpLog);
             this.splitBottom.Size = new System.Drawing.Size(708, 276);
-            this.splitBottom.SplitterDistance = 390;
+            this.splitBottom.SplitterDistance = 400;
             this.splitBottom.SplitterWidth = 6;
             this.splitBottom.TabIndex = 1;
             //
@@ -427,15 +493,70 @@ namespace F1RaceSimulator.WinForms
             this.lstLog.Name = "lstLog";
             this.lstLog.TabIndex = 0;
             //
-            // grpStandings
+            // tabRight
             //
-            this.grpStandings.Controls.Add(this.dgvStandings);
-            this.grpStandings.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.grpStandings.Name = "grpStandings";
-            this.grpStandings.Padding = new System.Windows.Forms.Padding(6);
-            this.grpStandings.TabIndex = 0;
-            this.grpStandings.TabStop = false;
-            this.grpStandings.Text = "Позиції";
+            this.tabRight.Controls.Add(this.tabPositions);
+            this.tabRight.Controls.Add(this.tabTelemetry);
+            this.tabRight.Controls.Add(this.tabSeason);
+            this.tabRight.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tabRight.Name = "tabRight";
+            this.tabRight.SelectedIndex = 0;
+            this.tabRight.SelectedIndexChanged += new System.EventHandler(this.TabRight_SelectedIndexChanged);
+            this.tabRight.TabIndex = 0;
+            //
+            // tabPositions
+            //
+            this.tabPositions.Controls.Add(this.dgvStandings);
+            this.tabPositions.Controls.Add(this.dgvQualifying);
+            this.tabPositions.Name = "tabPositions";
+            this.tabPositions.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPositions.Text = "Позиції";
+            this.tabPositions.UseVisualStyleBackColor = true;
+            //
+            // tabTelemetry
+            //
+            this.tabTelemetry.Controls.Add(this.dgvTelemetry);
+            this.tabTelemetry.Name = "tabTelemetry";
+            this.tabTelemetry.Padding = new System.Windows.Forms.Padding(3);
+            this.tabTelemetry.Text = "Телеметрія всіх пілотів";
+            this.tabTelemetry.UseVisualStyleBackColor = true;
+            //
+            // tabSeason
+            //
+            this.tabSeason.Controls.Add(this.dgvSeason);
+            this.tabSeason.Controls.Add(this.lblSeason);
+            this.tabSeason.Name = "tabSeason";
+            this.tabSeason.Padding = new System.Windows.Forms.Padding(3);
+            this.tabSeason.Text = "Чемпіонат";
+            this.tabSeason.UseVisualStyleBackColor = true;
+            //
+            // lblSeason
+            //
+            this.lblSeason.Dock = System.Windows.Forms.DockStyle.Top;
+            this.lblSeason.Name = "lblSeason";
+            this.lblSeason.Padding = new System.Windows.Forms.Padding(2, 4, 2, 4);
+            this.lblSeason.Size = new System.Drawing.Size(540, 44);
+            this.lblSeason.Text = "Ще не зіграно жодного етапу.";
+            //
+            // dgvQualifying
+            //
+            this.dgvQualifying.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.dgvQualifying.Name = "dgvQualifying";
+            this.dgvQualifying.TabIndex = 1;
+            this.dgvQualifying.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.Grid_CellClick);
+            //
+            // dgvTelemetry
+            //
+            this.dgvTelemetry.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.dgvTelemetry.Name = "dgvTelemetry";
+            this.dgvTelemetry.TabIndex = 0;
+            this.dgvTelemetry.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.Grid_CellClick);
+            //
+            // dgvSeason
+            //
+            this.dgvSeason.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.dgvSeason.Name = "dgvSeason";
+            this.dgvSeason.TabIndex = 0;
             //
             // dgvStandings
             //
@@ -458,7 +579,8 @@ namespace F1RaceSimulator.WinForms
             this.colTeam,
             this.colGap,
             this.colTyre,
-            this.colPits});
+            this.colPits,
+            this.colPoints});
             this.dgvStandings.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dgvStandings.EnableHeadersVisualStyles = false;
             this.dgvStandings.MultiSelect = false;
@@ -467,7 +589,7 @@ namespace F1RaceSimulator.WinForms
             this.dgvStandings.RowHeadersVisible = false;
             this.dgvStandings.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.dgvStandings.TabIndex = 0;
-            this.dgvStandings.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.DgvStandings_CellClick);
+            this.dgvStandings.CellClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.Grid_CellClick);
             //
             // colColor
             //
@@ -513,6 +635,13 @@ namespace F1RaceSimulator.WinForms
             this.colPits.HeaderText = "Піт";
             this.colPits.Name = "colPits";
             //
+            // colPoints
+            //
+            this.colPoints.FillWeight = 10F;
+            this.colPoints.HeaderText = "Очки";
+            this.colPoints.Name = "colPoints";
+            this.colPoints.ToolTipText = "Очки за поточну позицію (після фінішу — нараховані)";
+            //
             // timerSim
             //
             this.timerSim.Interval = 30;
@@ -522,7 +651,7 @@ namespace F1RaceSimulator.WinForms
             //
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1280, 780);
+            this.ClientSize = new System.Drawing.Size(1366, 840);
             this.Controls.Add(this.splitMain);
             this.Controls.Add(this.statusStrip);
             this.Controls.Add(this.toolStrip);
@@ -552,8 +681,14 @@ namespace F1RaceSimulator.WinForms
             this.splitBottom.ResumeLayout(false);
             this.grpDriver.ResumeLayout(false);
             this.grpLog.ResumeLayout(false);
-            this.grpStandings.ResumeLayout(false);
+            this.tabRight.ResumeLayout(false);
+            this.tabPositions.ResumeLayout(false);
+            this.tabTelemetry.ResumeLayout(false);
+            this.tabSeason.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.dgvStandings)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvQualifying)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvTelemetry)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvSeason)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
         }
@@ -569,6 +704,8 @@ namespace F1RaceSimulator.WinForms
         private System.Windows.Forms.ToolStripMenuItem mnuRace;
         private System.Windows.Forms.ToolStripMenuItem mnuStartPause;
         private System.Windows.Forms.ToolStripMenuItem mnuRestart;
+        private System.Windows.Forms.ToolStripMenuItem mnuSkipQualifying;
+        private System.Windows.Forms.ToolStripMenuItem mnuNextRound;
         private System.Windows.Forms.ToolStripMenuItem mnuSeason;
         private System.Windows.Forms.ToolStripMenuItem mnuStandings;
         private System.Windows.Forms.ToolStripMenuItem mnuResetSeason;
@@ -577,6 +714,8 @@ namespace F1RaceSimulator.WinForms
         private System.Windows.Forms.ToolStrip toolStrip;
         private System.Windows.Forms.ToolStripButton tsbStartPause;
         private System.Windows.Forms.ToolStripButton tsbRestart;
+        private System.Windows.Forms.ToolStripButton tsbSkipQualifying;
+        private System.Windows.Forms.ToolStripButton tsbNextRound;
         private System.Windows.Forms.ToolStripSeparator tsSeparator1;
         private System.Windows.Forms.ToolStripLabel tslSpeed;
         private System.Windows.Forms.ToolStripComboBox tscSpeed;
@@ -585,6 +724,8 @@ namespace F1RaceSimulator.WinForms
         private System.Windows.Forms.ToolStripComboBox tscTrack;
         private System.Windows.Forms.ToolStripSeparator tsSeparator3;
         private System.Windows.Forms.ToolStripLabel tslWeather;
+        private System.Windows.Forms.ToolStripSeparator tsSeparator4;
+        private System.Windows.Forms.ToolStripLabel tslSession;
         private System.Windows.Forms.StatusStrip statusStrip;
         private System.Windows.Forms.ToolStripStatusLabel tsslLap;
         private System.Windows.Forms.ToolStripStatusLabel tsslLeader;
@@ -599,7 +740,14 @@ namespace F1RaceSimulator.WinForms
         private F1RaceSimulator.WinForms.TelemetryPanel telemetryPanel;
         private System.Windows.Forms.GroupBox grpLog;
         private System.Windows.Forms.ListBox lstLog;
-        private System.Windows.Forms.GroupBox grpStandings;
+        private System.Windows.Forms.TabControl tabRight;
+        private System.Windows.Forms.TabPage tabPositions;
+        private System.Windows.Forms.TabPage tabTelemetry;
+        private System.Windows.Forms.TabPage tabSeason;
+        private System.Windows.Forms.DataGridView dgvQualifying;
+        private System.Windows.Forms.DataGridView dgvTelemetry;
+        private System.Windows.Forms.DataGridView dgvSeason;
+        private System.Windows.Forms.Label lblSeason;
         private System.Windows.Forms.DataGridView dgvStandings;
         private System.Windows.Forms.DataGridViewTextBoxColumn colColor;
         private System.Windows.Forms.DataGridViewTextBoxColumn colPos;
@@ -608,6 +756,7 @@ namespace F1RaceSimulator.WinForms
         private System.Windows.Forms.DataGridViewTextBoxColumn colGap;
         private System.Windows.Forms.DataGridViewTextBoxColumn colTyre;
         private System.Windows.Forms.DataGridViewTextBoxColumn colPits;
+        private System.Windows.Forms.DataGridViewTextBoxColumn colPoints;
         private System.Windows.Forms.Timer timerSim;
     }
 }

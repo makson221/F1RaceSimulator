@@ -1,0 +1,56 @@
+@startuml sequence-weekend
+!include _style.iuml
+title Діаграма послідовності — гоночний вікенд: кваліфікація, гонка, фініш, очки, наступний етап
+autonumber
+
+actor "Користувач" as User
+participant ":MainForm" as Form
+participant ":QualifyingSession" as Quali
+participant "CarFactory" as Factory
+participant ":Race" as Race
+participant ":Car" as Car
+participant "Championship\n<<Singleton>>" as Champ
+participant ":ResultsForm" as Results
+
+== Кваліфікація ==
+Form -> Quali : new QualifyingSession(track, cars, random)
+Form -> Quali : Subscribe(this), Start()
+User -> Form : F5 «Старт кваліфікації»
+loop кожен тік таймера
+  Form -> Quali : Step(dt × швидкість)
+  Quali -> Quali : виїзд → розігрів → швидке коло → повернення
+  opt час сегмента минув і всі в боксах
+    Quali -> Quali : FinishSegment()\nQ1/Q2: вибувають 6 найповільніших
+  end
+end
+Quali -> Form : OnQualifyingEvent(QualifyingFinished)
+Form -> Quali : GetResults()
+Form -> Factory : CreateGrid(data, results)
+Factory --> Form : стартова решітка
+Form -> Race : new Race(track, grid, random)\nSubscribe(this), Start()
+
+== Гонка ==
+User -> Form : F5 «Старт гонки»
+loop поки не всі в парк-ферме
+  Form -> Race : Step(dt × швидкість)
+  Race -> Car : Advance(), UpdateSystems(), Telemetry
+  opt лідер перетнув фініш на останньому колі
+    Race -> Car : Finish(time)\n→ PostRace = CoolDownLap
+  end
+  opt усі, хто біжить, отримали прапор
+    Race -> Form : OnRaceEvent(RaceFinished)
+    Form -> Champ : AddRaceResult(track, GetResults())
+    Form -> Form : SaveAutosave()
+  end
+  Race -> Car : AdvanceCoolDown() → EnterParcFerme()\n→ MoveToParcFerme()
+end
+Race -> Form : OnRaceEvent(CarsParked)
+
+== Підсумки ==
+Form -> Results : new ResultsForm(race, nextTrack)
+Results -> Champ : GetDriverStandings(round − 1), GetDriverStandings()
+Form -> Results : ShowDialog()
+User -> Results : «Наступний етап»
+Results --> Form : DialogResult.OK
+Form -> Form : GoToTrack(next) → PrepareWeekend()
+@enduml

@@ -7,16 +7,23 @@ using F1RaceSimulator.Core.Simulation;
 namespace F1RaceSimulator.WinForms;
 
 /// <summary>
-/// Малює схему траси, піт-лейн і боліди засобами GDI+ (<see cref="Graphics"/>).
-/// Відповідає лише за малювання і нічого не змінює в гонці
-/// (принцип єдиної відповідальності).
+/// Малює схему траси в стилі офіційних карт F1: трасу з кольоровими секторами,
+/// номери поворотів, піт-лейн, бокси, лінію старту і боліди будь-якої сесії
+/// (<see cref="ITrackSession"/>: кваліфікації або гонки). Відповідає лише за малювання
+/// і нічого не змінює в симуляції (принцип єдиної відповідальності).
 /// </summary>
 public sealed class TrackRenderer
 {
-    private static readonly Color TrackColor = Color.FromArgb(75, 86, 100);
+    private static readonly Color TrackColor = Color.FromArgb(52, 60, 72);
     private static readonly Color PitLaneColor = Color.FromArgb(192, 57, 43);
     private static readonly Color AccentColor = Color.FromArgb(10, 98, 191);
     private static readonly Color LabelColor = Color.FromArgb(26, 35, 48);
+
+    /// <summary>Кольори секторів, як на офіційних картах: червоний, синій, жовтий.</summary>
+    private static readonly Color[] SectorColors =
+    {
+        Color.FromArgb(225, 6, 0), Color.FromArgb(0, 144, 224), Color.FromArgb(240, 190, 0)
+    };
 
     private readonly Dictionary<string, Color> _colorCache = new();
     private readonly List<(Car Car, PointF Point)> _carPositions = new();
@@ -24,8 +31,8 @@ public sealed class TrackRenderer
     /// <summary>Екранні координати болідів після останнього малювання (для вибору мишею).</summary>
     public IReadOnlyList<(Car Car, PointF Point)> CarPositions => _carPositions;
 
-    /// <summary>Малює трасу, піт-лейн, лінію старту, бокси та боліди.</summary>
-    public void Draw(Graphics g, Rectangle bounds, Track track, Race? race, Car? selected)
+    /// <summary>Малює трасу і боліди сесії (сесія може бути null — тоді лише траса).</summary>
+    public void Draw(Graphics g, Rectangle bounds, Track track, ITrackSession? session, Car? selected)
     {
         ArgumentNullException.ThrowIfNull(g);
         ArgumentNullException.ThrowIfNull(track);
@@ -33,7 +40,7 @@ public sealed class TrackRenderer
         _carPositions.Clear();
         TrackLayout layout = track.Layout;
 
-        const float margin = 12f;
+        const float margin = 10f;
         float scale = (float)Math.Min(
             (bounds.Width - 2 * margin) / layout.Width,
             (bounds.Height - 2 * margin) / layout.Height);
@@ -46,27 +53,23 @@ public sealed class TrackRenderer
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-        // 1. Траса — товста сіра лінія.
-        PointF[] trackPoints = layout.TrackPath.Points.Select(Map).ToArray();
-        using (var trackPen = new Pen(TrackColor, Math.Max(4f, 6f * scale)))
-        {
-            trackPen.LineJoin = LineJoin.Round;
+        // 1. Траса — товста темна лінія, поверх неї тонкі кольорові лінії секторів.
+        Polyline path = layout.TrackPath;
+        PointF[] trackPoints = path.Points.Select(Map).ToArray();
+        using (var trackPen = new Pen(TrackColor, Math.Max(5f, 7f * scale)) { LineJoin = LineJoin.Round })
             g.DrawPolygon(trackPen, trackPoints);
-        }
+        DrawSectors(g, layout, Map, Math.Max(1.6f, 2f * scale));
 
         // 2. Піт-лейн — тонка червона лінія.
         PointF[] pitPoints = layout.PitLanePath.Points.Select(Map).ToArray();
-        using (var pitPen = new Pen(PitLaneColor, Math.Max(1.5f, 1.8f * scale)))
-        {
-            pitPen.LineJoin = LineJoin.Round;
+        using (var pitPen = new Pen(PitLaneColor, Math.Max(1.5f, 1.8f * scale)) { LineJoin = LineJoin.Round })
             g.DrawLines(pitPen, pitPoints);
-        }
 
         // 3. Бокси команд у піт-лейні.
-        if (race != null)
+        if (session != null)
         {
             float box = Math.Max(3f, 2.6f * scale);
-            foreach (Team team in race.Cars.Select(c => c.Team).Distinct())
+            foreach (Team team in session.GetCarPositions().Select(c => c.Car.Team).Concat(TeamsOf(session)).Distinct())
             {
                 PointF p = Map(layout.PitLanePath.PointAt(Race.BoxPositionFor(team)));
                 using var brush = new SolidBrush(ColorOf(team));
@@ -78,13 +81,16 @@ public sealed class TrackRenderer
         using var font = new Font("Segoe UI", fontSize, FontStyle.Bold, GraphicsUnit.Point);
         using var labelBrush = new SolidBrush(LabelColor);
 
-        // 4. Лінія старту/фінішу та підпис.
+        // 4. Номери поворотів — кружечки збоку від траси, як на офіційній карті.
+        DrawTurns(g, layout, Map, scale);
+
+        // 5. Лінія старту/фінішу та підпис.
         if (layout.StartFinish.Length == 4)
         {
             var a = Map(new Vec2(layout.StartFinish[0], layout.StartFinish[1]));
             var b = Map(new Vec2(layout.StartFinish[2], layout.StartFinish[3]));
-            using var linePen = new Pen(Color.Black, Math.Max(2f, 1.8f * scale));
-            g.DrawLine(linePen, a, b);
+            using (var linePen = new Pen(Color.Black, Math.Max(2.5f, 2f * scale)))
+                g.DrawLine(linePen, a, b);
 
             if (layout.LabelPosition.Length == 2)
             {
@@ -92,7 +98,6 @@ public sealed class TrackRenderer
                 SizeF size = g.MeasureString(text, font);
                 PointF label = Map(new Vec2(layout.LabelPosition[0], layout.LabelPosition[1]));
                 var rect = new RectangleF(label.X - size.Width / 2, label.Y - size.Height * 0.8f, size.Width, size.Height);
-
                 if (layout.LabelLeader)
                 {
                     var mid = new PointF((a.X + b.X) / 2, (a.Y + b.Y) / 2);
@@ -104,24 +109,22 @@ public sealed class TrackRenderer
             }
         }
 
-        // 5. Стрілка напрямку руху поруч зі стартом.
-        DrawDirectionArrow(g, layout.TrackPath, Map);
+        // 6. Стрілка напрямку руху поруч зі стартом.
+        DrawDirectionArrow(g, path, Map);
 
-        // 6. Боліди. Спочатку задні, щоб лідер був зверху.
-        if (race == null) return;
+        // 7. Боліди (сесія повертає їх від останнього до першого — лідер зверху).
+        if (session == null) return;
         float radius = Math.Max(3.5f, 4f * scale);
-        foreach (Car car in race.Standings.Reverse())
+        foreach (CarPosition cp in session.GetCarPositions())
         {
-            if (car.State == CarState.Retired) continue;
-
-            Vec2 position = car.IsInPits
-                ? layout.PitLanePath.PointAt(car.PitLaneProgress)
-                : layout.TrackPath.PointAt(Polyline.Wrap(car.Distance));
+            Vec2 position = cp.InPitLane
+                ? layout.PitLanePath.PointAt(cp.Fraction)
+                : path.PointAt(cp.Fraction);
             PointF p = Map(position);
-            _carPositions.Add((car, p));
+            _carPositions.Add((cp.Car, p));
 
-            bool isSelected = car == selected;
-            using (var fill = new SolidBrush(ColorOf(car.Team)))
+            bool isSelected = cp.Car == selected;
+            using (var fill = new SolidBrush(ColorOf(cp.Car.Team)))
                 g.FillEllipse(fill, p.X - radius, p.Y - radius, radius * 2, radius * 2);
             using (var outline = new Pen(Color.White, 1f))
                 g.DrawEllipse(outline, p.X - radius, p.Y - radius, radius * 2, radius * 2);
@@ -133,15 +136,63 @@ public sealed class TrackRenderer
                 g.DrawEllipse(ringPen, p.X - ring, p.Y - ring, ring * 2, ring * 2);
             }
 
-            if (car.Position <= 3 || isSelected || car.IsInPits)
+            string? text = cp.Label ?? (isSelected ? cp.Car.Driver.Code : null);
+            if (text != null)
             {
-                string text = car.IsInPits ? car.Driver.Code + " · PIT" : car.Driver.Code;
                 SizeF size = g.MeasureString(text, font);
                 var textPoint = new PointF(p.X - size.Width / 2, p.Y - radius - size.Height);
                 using var halo = new SolidBrush(Color.FromArgb(200, Color.White));
                 g.FillRectangle(halo, textPoint.X + 2, textPoint.Y + 2, size.Width - 4, size.Height - 4);
                 g.DrawString(text, font, labelBrush, textPoint);
             }
+        }
+    }
+
+    /// <summary>Команди всіх учасників сесії (бокси видно, навіть коли боліди в гаражі).</summary>
+    private static IEnumerable<Team> TeamsOf(ITrackSession session) => session switch
+    {
+        Race race => race.Cars.Select(c => c.Team),
+        QualifyingSession q => q.Cars.Select(c => c.Car.Team),
+        _ => Enumerable.Empty<Team>()
+    };
+
+    /// <summary>Три сектори траси кольоровими лініями поверх траси.</summary>
+    private static void DrawSectors(Graphics g, TrackLayout layout, Func<Vec2, PointF> map, float width)
+    {
+        double[] bounds = layout.Sectors.Length >= 2
+            ? new[] { 0, layout.Sectors[0], layout.Sectors[1], 1 }
+            : new[] { 0, 1.0 / 3, 2.0 / 3, 1 };
+        Polyline path = layout.TrackPath;
+        for (int s = 0; s < 3; s++)
+        {
+            // Крок 0.25 % кола — лінія рівна, а межі секторів точні.
+            var points = new List<PointF>();
+            for (double f = bounds[s]; f < bounds[s + 1]; f += 0.0025)
+                points.Add(map(path.PointAt(f)));
+            points.Add(map(path.PointAt(bounds[s + 1] - 1e-6)));
+            if (points.Count < 2) continue;
+            using var pen = new Pen(SectorColors[s], width) { LineJoin = LineJoin.Round, StartCap = LineCap.Round, EndCap = LineCap.Round };
+            g.DrawLines(pen, points.ToArray());
+        }
+    }
+
+    /// <summary>Номери поворотів у білих кружечках.</summary>
+    private static void DrawTurns(Graphics g, TrackLayout layout, Func<Vec2, PointF> map, float scale)
+    {
+        if (layout.Turns.Length == 0) return;
+        float r = Math.Clamp(4.6f * scale, 6f, 9f);
+        using var font = new Font("Segoe UI", Math.Clamp(r * 0.95f, 6f, 8.5f), FontStyle.Bold, GraphicsUnit.Pixel);
+        using var fill = new SolidBrush(Color.White);
+        using var border = new Pen(Color.FromArgb(70, 80, 92), 1f);
+        using var text = new SolidBrush(Color.FromArgb(30, 36, 44));
+        using var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+        foreach (TurnMarker turn in layout.Turns)
+        {
+            PointF c = map(new Vec2(turn.LabelX, turn.LabelY));
+            float rr = turn.Label.Length > 2 ? r * 1.25f : r;
+            g.FillEllipse(fill, c.X - rr, c.Y - rr, rr * 2, rr * 2);
+            g.DrawEllipse(border, c.X - rr, c.Y - rr, rr * 2, rr * 2);
+            g.DrawString(turn.Label, font, text, new RectangleF(c.X - rr, c.Y - rr, rr * 2, rr * 2 + 1), format);
         }
     }
 

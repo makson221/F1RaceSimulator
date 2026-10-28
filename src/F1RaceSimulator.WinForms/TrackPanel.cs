@@ -24,10 +24,10 @@ public sealed class TrackPanel : Panel
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Track? Track { get; set; }
 
-    /// <summary>Поточна гонка (для малювання болідів).</summary>
+    /// <summary>Поточна сесія — кваліфікація або гонка (для малювання болідів).</summary>
     [Browsable(false)]
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-    public Race? Race { get; set; }
+    public ITrackSession? Session { get; set; }
 
     /// <summary>Обраний пілот — його болід підсвічується кільцем.</summary>
     [Browsable(false)]
@@ -49,7 +49,7 @@ public sealed class TrackPanel : Panel
                 Color.Gray, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
             return;
         }
-        _renderer.Draw(e.Graphics, ClientRectangle, Track, Race, SelectedCar);
+        _renderer.Draw(e.Graphics, ClientRectangle, Track, Session, SelectedCar);
     }
 
     protected override void OnMouseClick(MouseEventArgs e)

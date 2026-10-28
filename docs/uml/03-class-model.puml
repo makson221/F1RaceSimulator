@@ -35,6 +35,27 @@ package "Models" {
     +Weather : string
     +AirTemperature : double
     +RaceDate : DateOnly?
+    +Profile : SpeedProfile
+    +SectorAt(fraction) : int
+  }
+  class SpeedProfile {
+    +LapSeconds : double
+    +Speed : int[]
+    +Gear : int[]
+    +Rpm : int[]
+    +Throttle : int[]
+    +Brake : int[]
+    +IsEmpty : bool
+    +RelativeSpeedAt(fraction) : double
+    +SpeedAt(fraction) : double
+    +SampleAt(fraction, lapSeconds)
+  }
+  class TurnMarker {
+    +Number : int
+    +Label : string
+    +Fraction : double
+    +LabelX : double
+    +LabelY : double
   }
   class TrackLayout {
     +Points : double[][]
@@ -46,6 +67,9 @@ package "Models" {
     +TrackPath : Polyline
     +PitLanePath : Polyline
     +PitSpan : double
+    +Orientation : string
+    +Sectors : double[]
+    +Turns : TurnMarker[]
   }
   enum TyreCompound {
     Soft
@@ -193,6 +217,8 @@ Car --> CarState
 Driver ..> Team : TeamId
 
 Track *--> "1" TrackLayout
+Track *--> "1" SpeedProfile : профіль кола\n(офіційна телеметрія)
+TrackLayout *--> "0..*" TurnMarker : повороти
 TrackLayout *--> "2" Polyline
 Polyline *--> "2..*" Vec2
 IPitStrategy ..> Track

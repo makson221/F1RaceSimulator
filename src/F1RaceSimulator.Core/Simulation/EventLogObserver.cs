@@ -1,10 +1,10 @@
 namespace F1RaceSimulator.Core.Simulation;
 
 /// <summary>
-/// Спостерігач, що веде журнал подій гонки.
+/// Спостерігач, що веде журнал подій гонки і кваліфікації.
 /// Інтерфейс програми підписується на його подію <see cref="EventAdded"/>.
 /// </summary>
-public sealed class EventLogObserver : IRaceObserver
+public sealed class EventLogObserver : IRaceObserver, IQualifyingObserver
 {
     private readonly List<RaceEvent> _events = new();
 
@@ -20,8 +20,15 @@ public sealed class EventLogObserver : IRaceObserver
     public void OnRaceEvent(Race race, RaceEvent raceEvent)
     {
         if (raceEvent.Type == RaceEventType.LapCompleted && !IncludeLapEvents) return;
-        _events.Add(raceEvent);
-        EventAdded?.Invoke(this, raceEvent);
+        Add(raceEvent);
+    }
+
+    public void OnQualifyingEvent(QualifyingSession session, RaceEvent qualifyingEvent) => Add(qualifyingEvent);
+
+    private void Add(RaceEvent e)
+    {
+        _events.Add(e);
+        EventAdded?.Invoke(this, e);
     }
 
     /// <summary>Кількість подій заданого типу.</summary>

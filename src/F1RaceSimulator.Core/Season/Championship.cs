@@ -77,10 +77,14 @@ public sealed class Championship
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    /// <summary>Таблиця пілотів: сортування за очками, потім за кількістю перемог.</summary>
-    public IReadOnlyList<StandingRow> GetDriverStandings()
+    /// <summary>
+    /// Таблиця пілотів: сортування за очками, потім за кількістю перемог.
+    /// </summary>
+    /// <param name="upToRound">Врахувати лише етапи до цього номера включно (null — усі).</param>
+    public IReadOnlyList<StandingRow> GetDriverStandings(int? upToRound = null)
     {
         var rows = _races
+            .Where(r => upToRound == null || r.Round <= upToRound)
             .SelectMany(r => r.Results)
             .GroupBy(e => e.DriverCode)
             .Select(g => new
@@ -101,9 +105,11 @@ public sealed class Championship
     }
 
     /// <summary>Кубок конструкторів: сума очок обох пілотів команди.</summary>
-    public IReadOnlyList<StandingRow> GetTeamStandings()
+    /// <param name="upToRound">Врахувати лише етапи до цього номера включно (null — усі).</param>
+    public IReadOnlyList<StandingRow> GetTeamStandings(int? upToRound = null)
     {
         var rows = _races
+            .Where(r => upToRound == null || r.Round <= upToRound)
             .SelectMany(r => r.Results)
             .GroupBy(e => e.TeamId)
             .Select(g => new
@@ -125,6 +131,14 @@ public sealed class Championship
     /// <summary>Очки пілота за весь сезон.</summary>
     public int PointsOf(string driverCode) =>
         _races.SelectMany(r => r.Results).Where(e => e.DriverCode == driverCode).Sum(e => e.Points);
+
+    /// <summary>Очки пілота без урахування етапу <paramref name="round"/> (щоб показати «було → стало»).</summary>
+    public int PointsBefore(string driverCode, int round) =>
+        _races.Where(r => r.Round != round).SelectMany(r => r.Results)
+              .Where(e => e.DriverCode == driverCode).Sum(e => e.Points);
+
+    /// <summary>Чи зіграно етап.</summary>
+    public bool HasRound(int round) => _races.Any(r => r.Round == round);
 
     /// <summary>Зберігає чемпіонат у файл JSON.</summary>
     public void Save(string path)

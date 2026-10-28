@@ -7,10 +7,11 @@
 | `01-use-cases` | Варіанти використання |
 | `02-components` | Компоненти (структура рішення) |
 | `03-class-model` | Класи: модель, шини, стратегії |
-| `04-class-simulation` | Класи: гонка, Observer, Singleton |
+| `04-class-simulation` | Класи: кваліфікація і гонка (`ITrackSession`), телеметрія, Observer, Singleton |
 | `05-class-ui` | Класи: інтерфейс Windows Forms |
 | `06-sequence-race-step` | Послідовність: крок симуляції з піт-стопом |
-| `07-state-car` | Стани боліда |
+| `07-state-car` | Стани боліда (з колом охолодження і парк-ферме) |
 | `08-class-components` | Класи: компоненти боліда і телеметрія (шини, двигун, паливо, ERS) |
+| `09-sequence-weekend` | Послідовність: кваліфікація → гонка → фініш → очки → наступний етап |
 
 Щоб перегенерувати зображення: `plantuml -charset UTF-8 -tpng *.puml` (або розширення PlantUML для VS Code / онлайн-редактор plantuml.com).

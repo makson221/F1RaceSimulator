@@ -1,110 +1,185 @@
 @startuml class-simulation
 !include _style.iuml
-title Діаграма класів — симуляція гонки, Observer і Singleton
+title Діаграма класів — сесії вікенду (кваліфікація, гонка), Observer і Singleton
 
 package "Simulation" {
+  interface ITrackSession {
+    +Track : Track
+    +ElapsedSeconds : double
+    +IsCompleted : bool
+    +Step(seconds : double) : void
+    +GetCarPositions() : IReadOnlyList<CarPosition>
+  }
+  class CarPosition <<record struct>> {
+    +Car : Car
+    +Fraction : double
+    +InPitLane : bool
+    +Label : string?
+  }
+  class QualifyingSession {
+    +{static} SegmentSeconds : double[]
+    +{static} BreakSeconds : double
+    +Segment : QualifyingSegment
+    +Standings : IReadOnlyList<QualifyingCar>
+    +TimeRemaining : double
+    +IsBreak : bool
+    +Subscribe(observer : IQualifyingObserver) : void
+    +Start() : void
+    +Step(seconds : double) : void
+    +RunToEnd() : void
+    +AdvanceCount(segment) : int
+    +GetResults() : IReadOnlyList<QualifyingResult>
+    -UpdateCar(q, dt, length) : void
+    -FinishSegment() : void
+    -UpdateOrder() : void
+  }
+  class QualifyingCar {
+    +Car : Car
+    +Stage : QualifyingStage
+    +EliminatedIn : QualifyingSegment?
+    +Position : int
+    +Telemetry : CarTelemetry
+    +Timing : LapTimer
+    +Best(segment) : double?
+    +StageText : string
+  }
+  enum QualifyingSegment {
+    Q1
+    Q2
+    Q3
+  }
+  enum QualifyingStage {
+    Garage
+    PitExit
+    OutLap
+    FlyingLap
+    InLap
+    PitEntry
+  }
   class Race {
     -_cars : List<Car>
     -_observers : List<IRaceObserver>
     -_random : IRandomSource
-    +Track : Track
     +Standings : IReadOnlyList<Car>
-    +ElapsedSeconds : double
     +IsChequeredFlag : bool
     +IsFinished : bool
+    +IsCompleted : bool
+    +FastestLap : double?
+    +FastestLapCar : Car?
     +CurrentLap : int
-    +TotalPitStops : int
     +Subscribe(observer : IRaceObserver) : void
-    +Unsubscribe(observer : IRaceObserver) : void
     +Start() : void
     +Step(seconds : double) : void
     +RunToFinish() : void
+    +RunToCompletion() : void
     +GapText(car : Car) : string
     +GetResults() : IReadOnlyList<RaceResult>
     -UpdateOnTrack(car, dt, gapAhead, gapBehind) : void
+    -UpdateTelemetry(car, fraction, lapTime) : void
+    -HandleSectors(car, before, after, dt) : void
+    -UpdatePostRace(car, dt) : void
     -ChooseDrivingMode(car, gapAhead, gapBehind) : void
-    -Warn(car, kind, message) : void
-    -UpdateInPitLane(car, dt) : void
-    -UpdatePitStop(car, dt) : void
-    -UpdateStandings() : void
     -Notify(type, message, car, other) : void
+  }
+  class LapTimer {
+    +LastLap : double?
+    +BestLap : double?
+    +CurrentSectors : IReadOnlyList<double?>
+    +BestSectors : IReadOnlyList<double?>
+    +Start(now) : void
+    +CompleteSector(sector, now) : void
+    +CompleteLap(now) : double
+    +{static} Format(seconds) : string
+  }
+  class CarTelemetry <<record struct>> {
+    +SpeedKmh : double
+    +Gear : int
+    +Rpm : int
+    +Throttle : int
+    +Brake : bool
+  }
+  enum PostRaceStage {
+    None
+    CoolDownLap
+    PitLane
+    Parked
   }
   interface IRaceObserver {
     +OnRaceEvent(race : Race, e : RaceEvent) : void
   }
+  interface IQualifyingObserver {
+    +OnQualifyingEvent(session : QualifyingSession, e : RaceEvent) : void
+  }
   class EventLogObserver {
     +Events : IReadOnlyList<RaceEvent>
     +EventAdded : event EventHandler<RaceEvent>
-    +OnRaceEvent(race, e) : void
     +Count(type) : int
   }
   class RaceEvent <<record>> {
     +Type : RaceEventType
     +Lap : int
-    +TimeSeconds : double
     +Message : string
     +Car : Car?
-    +OtherCar : Car?
+    +Label : string?
   }
   enum RaceEventType {
     RaceStarted
-    LapCompleted
     Overtake
-    PitEntry
     PitStop
     Retirement
-    TechnicalWarning
-    LeaderFinished
+    FastestLap
     RaceFinished
+    CarsParked
+    QualifyingSegmentStarted
+    QualifyingLap
+    QualifyingLapDeleted
+    QualifyingFinished
+    ...
   }
   interface IRandomSource {
     +NextDouble() : double
-  }
-  class SystemRandomSource
-  class Qualifying {
-    +Run(cars, track) : IReadOnlyList<QualifyingResult>
   }
   class QualifyingResult <<record>> {
     +Position : int
     +Car : Car
     +LapTimeSeconds : double
+    +Q1 : double?
+    +Q2 : double?
+    +Q3 : double?
   }
   class RaceResult <<record>> {
     +Position : int
     +Car : Car
-    +Laps : int
     +Status : string
     +Points : int
   }
   class PointsSystem <<static>> {
     +{static} ForPosition(position : int) : int
   }
-  class Car
+  class Car {
+    +Telemetry : CarTelemetry
+    +Timing : LapTimer
+    +PostRace : PostRaceStage
+    +Finish(time) : void
+    +AdvanceCoolDown(laps) : void
+    +EnterParcFerme() : void
+  }
 }
 
 package "Season" {
   class Championship <<Singleton>> {
-    -{static} LazyInstance : Lazy<Championship>
-    -_races : List<CompletedRace>
-    -Championship()
     +{static} Instance : Championship
     +AddRaceResult(track, results) : void
-    +GetDriverStandings() : IReadOnlyList<StandingRow>
-    +GetTeamStandings() : IReadOnlyList<StandingRow>
-    +Save(path : string) : void
-    +Load(path : string) : void
-    +Reset() : void
+    +GetDriverStandings(upToRound : int?) : IReadOnlyList<StandingRow>
+    +GetTeamStandings(upToRound : int?) : IReadOnlyList<StandingRow>
+    +PointsBefore(code, round) : int
+    +Save(path) : void
+    +Load(path) : void
   }
   class SeasonData {
-    +Teams : IReadOnlyList<Team>
-    +Drivers : IReadOnlyList<Driver>
     +Tracks : IReadOnlyList<Track>
-    +GetTeam(id) : Team
     +NextTrack(today : DateOnly) : Track
-  }
-  class DataLoader <<static>> {
-    +{static} LoadSeason(dataDirectory) : SeasonData
-    +{static} LoadList<T>(path) : List<T>
+    +NextTrackAfter(track : Track) : Track?
   }
   class CarFactory <<static>> {
     +{static} CreateCars(data) : List<Car>
@@ -116,21 +191,34 @@ package "WinForms" {
   class MainForm
 }
 
+ITrackSession <|.. QualifyingSession
+ITrackSession <|.. Race
+ITrackSession ..> CarPosition : <<create>>
+QualifyingSession *--> "22" QualifyingCar
+QualifyingSession o--> "0..*" IQualifyingObserver
+QualifyingSession --> QualifyingSegment
+QualifyingSession ..> QualifyingResult : <<create>>
+QualifyingCar --> QualifyingStage
+QualifyingCar *--> LapTimer
+QualifyingCar o--> Car
 Race o--> "1..*" Car : боліди
 Race o--> "0..*" IRaceObserver : спостерігачі
 Race --> IRandomSource
+QualifyingSession --> IRandomSource
 Race ..> RaceEvent : <<create>>
 Race ..> RaceResult : <<create>>
+Car *--> CarTelemetry
+Car *--> LapTimer
+Car --> PostRaceStage
 RaceEvent --> RaceEventType
 IRaceObserver <|.. EventLogObserver
+IQualifyingObserver <|.. EventLogObserver
 IRaceObserver <|.. MainForm
-IRandomSource <|.. SystemRandomSource
-Qualifying --> IRandomSource
-Qualifying ..> QualifyingResult : <<create>>
+IQualifyingObserver <|.. MainForm
 RaceResult ..> PointsSystem
-DataLoader ..> SeasonData : <<create>>
 CarFactory ..> Car : <<create>>
-CarFactory ..> SeasonData
+CarFactory ..> QualifyingResult : решітка
 Championship ..> RaceResult
-MainForm ..> Championship : Instance
+MainForm ..> Championship : очки після\nкожного Гран-прі
+MainForm ..> SeasonData : наступний етап
 @enduml

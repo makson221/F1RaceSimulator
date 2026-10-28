@@ -133,7 +133,7 @@ public class ComponentTests
         fuel.FillForRace(laps: 50, lapLengthKm: 5);
 
         Assert.Equal(5 * FuelTank.KgPerKm, fuel.ConsumptionPerLap, precision: 9);
-        Assert.Equal(50 * fuel.ConsumptionPerLap + FuelTank.ReserveKg, fuel.CapacityKg, precision: 9);
+        Assert.Equal(50 * fuel.ConsumptionPerLap + FuelTank.ReserveKg + FuelTank.SampleKg, fuel.CapacityKg, precision: 9);
         Assert.True(fuel.LapsLeft > 50);
         Assert.Equal(1.0, fuel.Level, precision: 9);
     }
@@ -228,7 +228,7 @@ public class ComponentTests
         var car = TestHelpers.TestCar();
         car.PrepareForRace(TestHelpers.SquareTrack(laps: 50), engineWear: 20);
 
-        Assert.Equal(50 * 4 * FuelTank.KgPerKm + FuelTank.ReserveKg, car.Fuel.CapacityKg, precision: 9);
+        Assert.Equal(50 * 4 * FuelTank.KgPerKm + FuelTank.ReserveKg + FuelTank.SampleKg, car.Fuel.CapacityKg, precision: 9);
         Assert.Equal(20, car.Engine.Wear, precision: 9);
     }
 }

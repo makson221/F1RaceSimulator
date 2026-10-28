@@ -42,6 +42,13 @@ public sealed class SeasonData
     public Track NextTrack(DateOnly today) =>
         Tracks.FirstOrDefault(t => t.RaceDate is { } d && d >= today) ?? Tracks[^1];
 
+    /// <summary>Наступний етап календаря після <paramref name="track"/> (null — сезон завершено).</summary>
+    public Track? NextTrackAfter(Track track)
+    {
+        ArgumentNullException.ThrowIfNull(track);
+        return Tracks.FirstOrDefault(t => t.Round > track.Round);
+    }
+
     /// <summary>Перевіряє цілісність даних: посилання на команди, унікальність кодів, наявність геометрії.</summary>
     private void Validate()
     {

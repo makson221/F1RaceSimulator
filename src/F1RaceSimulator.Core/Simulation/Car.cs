@@ -82,6 +82,24 @@ public sealed class Car
 
     public CarState State { get; private set; } = CarState.OnTrack;
 
+    /// <summary>Миттєва телеметрія: швидкість, передача, оберти, газ, гальмо.</summary>
+    public CarTelemetry Telemetry { get; internal set; } = CarTelemetry.Stopped;
+
+    /// <summary>Хронометраж: поточне, останнє і найкраще коло, сектори.</summary>
+    public LapTimer Timing { get; } = new();
+
+    /// <summary>Етап після фінішу: коло охолодження, піт-лейн, парк-ферме.</summary>
+    public PostRaceStage PostRace { get; private set; } = PostRaceStage.None;
+
+    /// <summary>Скільки кола проїхано після фінішу (коло охолодження).</summary>
+    public double CoolDownDistance { get; private set; }
+
+    /// <summary>Прогрес у піт-лейні на шляху до парк-ферме (0..1).</summary>
+    public double ParcFermeProgress { get; private set; }
+
+    /// <summary>Положення на колі під час кола охолодження (частка 0..1).</summary>
+    public double CoolDownFraction => Geometry.Polyline.Wrap(Distance + CoolDownDistance);
+
     /// <summary>
     /// Пройдена дистанція в колах від лінії старту. Наприклад, 12.4 — пройдено 12 кіл і 40 % тринадцятого.
     /// На стартовій решітці значення від'ємне (болід стоїть позаду лінії).
@@ -271,9 +289,13 @@ public sealed class Car
         if (IsInPits) Distance = RaceDistance;
         State = CarState.Retired;
         RetirementReason = reason;
+        Telemetry = CarTelemetry.Stopped;   // болід зупинився — телеметрія нульова
     }
 
-    /// <summary>Фініш: болід отримав клетчастий прапор.</summary>
+    /// <summary>
+    /// Фініш: болід отримав клетчастий прапор. Він не зупиняється на лінії,
+    /// а продовжує рух — починається коло охолодження.
+    /// </summary>
     public void Finish(double raceTimeSeconds)
     {
         if (!IsRunning) return;
@@ -281,6 +303,39 @@ public sealed class Car
         if (IsInPits) Distance = RaceDistance;
         State = CarState.Finished;
         FinishTime = raceTimeSeconds;
+        PostRace = PostRaceStage.CoolDownLap;
+        CoolDownDistance = 0;
+    }
+
+    /// <summary>Рух колом охолодження на <paramref name="laps"/> кола.</summary>
+    public void AdvanceCoolDown(double laps)
+    {
+        if (PostRace != PostRaceStage.CoolDownLap)
+            throw new InvalidOperationException("Коло охолодження можливе лише після фінішу.");
+        CoolDownDistance += Math.Max(0, laps);
+    }
+
+    /// <summary>Заїзд у піт-лейн після кола охолодження.</summary>
+    public void EnterParcFerme()
+    {
+        if (PostRace != PostRaceStage.CoolDownLap)
+            throw new InvalidOperationException("Заїхати в парк-ферме можна лише після кола охолодження.");
+        PostRace = PostRaceStage.PitLane;
+        ParcFermeProgress = 0;
+    }
+
+    /// <summary>
+    /// Рух піт-лейном до місця стоянки <paramref name="stopAt"/> (0..1).
+    /// Повертає true, коли болід зупинився в парк-ферме.
+    /// </summary>
+    public bool MoveToParcFerme(double progressDelta, double stopAt)
+    {
+        if (PostRace != PostRaceStage.PitLane) return PostRace == PostRaceStage.Parked;
+        ParcFermeProgress = Math.Min(stopAt, ParcFermeProgress + Math.Max(0, progressDelta));
+        if (ParcFermeProgress < stopAt) return false;
+        PostRace = PostRaceStage.Parked;
+        Telemetry = CarTelemetry.Stopped;
+        return true;
     }
 
     public override string ToString() => $"{Driver.Code} ({Team.Name})";

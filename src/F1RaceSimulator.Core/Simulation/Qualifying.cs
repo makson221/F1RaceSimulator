@@ -3,8 +3,23 @@ using F1RaceSimulator.Core.Models;
 namespace F1RaceSimulator.Core.Simulation;
 
 /// <summary>Результат кваліфікації одного пілота.</summary>
+/// <param name="Position">Позиція на стартовій решітці.</param>
+/// <param name="Car">Болід.</param>
+/// <param name="LapTimeSeconds">Час, що визначив позицію (найкращий у сегменті, де пілот вибув, або в Q3).</param>
 public sealed record QualifyingResult(int Position, Car Car, double LapTimeSeconds)
 {
+    /// <summary>Найкращий час у Q1 (null — немає часу).</summary>
+    public double? Q1 { get; init; }
+
+    /// <summary>Найкращий час у Q2.</summary>
+    public double? Q2 { get; init; }
+
+    /// <summary>Найкращий час у Q3.</summary>
+    public double? Q3 { get; init; }
+
+    /// <summary>Сегмент, у якому пілот вибув (null — пілот у топ-10 або кваліфікація з одного кола).</summary>
+    public QualifyingSegment? EliminatedIn { get; init; }
+
     /// <summary>Час кола у форматі «1:21.345».</summary>
     public string LapTimeText => FormatLapTime(LapTimeSeconds);
 

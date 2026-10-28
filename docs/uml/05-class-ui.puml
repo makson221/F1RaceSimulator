@@ -15,29 +15,52 @@ package "System" {
 package "F1RaceSimulator.WinForms" {
   class MainForm {
     -_data : SeasonData
+    -_phase : WeekendPhase
+    -_qualifying : QualifyingSession?
     -_race : Race?
     -_log : EventLogObserver
     -_track : Track
     -_selected : Car?
     -_timeScale : double
-    -_running : bool
+    -_autosavePath : string
+    -Session : ITrackSession?
     +MainForm(data : SeasonData)
+    +OnQualifyingEvent(session, e) : void
     +OnRaceEvent(race, e) : void
+    -PrepareWeekend() : void
     -PrepareRace() : void
     -TimerSim_Tick(sender, e) : void
-    -SetRunning(running : bool) : void
-    -RefreshStandings() : void
-    -RefreshDriverCard() : void
-    -RefreshStatus() : void
+    -HandlePendingEvents() : void
     -OnRaceFinished() : void
+    -OnCarsParked() : void
+    -RefreshQualifying() : void
+    -RefreshStandings() : void
+    -RefreshTelemetryGrid() : void
+    -RefreshSeason() : void
+    -GoToTrack(track) : void
+    -SaveAutosave() : void
+  }
+  enum WeekendPhase {
+    Qualifying
+    Race
+  }
+  class ResultsForm {
+    +ResultsForm(race : Race, nextTrack : Track?)
+    -FillRace(race) : void
+    -FillChampionship(round) : void
   }
   class ChampionshipForm {
     -ChampionshipForm_Load(sender, e) : void
   }
+  class GridStyle <<static>> {
+    +{static} Setup(grid, columns) : void
+    +{static} EnsureRows(grid, count) : void
+    +{static} EnableDoubleBuffering(control) : void
+  }
   class TrackPanel {
     -_renderer : TrackRenderer
     +Track : Track?
-    +Race : Race?
+    +Session : ITrackSession?
     +SelectedCar : Car?
     +CarClicked : event EventHandler<CarEventArgs>
     #OnPaint(e) : void
@@ -45,18 +68,20 @@ package "F1RaceSimulator.WinForms" {
   }
   class TrackRenderer {
     +CarPositions : IReadOnlyList<(Car, PointF)>
-    +Draw(g, bounds, track, race, selected) : void
+    +Draw(g, bounds, track, session : ITrackSession?, selected) : void
+    -DrawSectors(g, layout, map, width) : void
+    -DrawTurns(g, layout, map, scale) : void
     +HitTest(point) : Car?
     +ColorOf(team) : Color
   }
   class TelemetryPanel {
     +SelectedCar : Car?
     +Race : Race?
+    +Qualifying : QualifyingSession?
     +TeamColor : Color
     #OnPaint(e) : void
-    -DrawBar(g, rect, fraction, color) : void
-    -DrawZone(g, rect, min, max, from, to, color) : void
-    -DrawMarker(g, rect, min, max, value, color) : void
+    +{static} StateText(car) : string
+    +{static} ModeText(car) : string
   }
   class CarEventArgs {
     +Car : Car
@@ -67,17 +92,27 @@ package "F1RaceSimulator.WinForms" {
 }
 
 interface IRaceObserver
+interface IQualifyingObserver
+interface ITrackSession
 
 Form <|-- MainForm
+Form <|-- ResultsForm
 Form <|-- ChampionshipForm
 Panel <|-- TrackPanel
 Control <|-- TelemetryPanel
 EventArgs <|-- CarEventArgs
 IRaceObserver <|.. MainForm
+IQualifyingObserver <|.. MainForm
+MainForm --> WeekendPhase
 MainForm *--> "1" TrackPanel
 MainForm *--> "1" TelemetryPanel : картка пілота
-TrackPanel *--> "1" TrackRenderer
-TrackPanel ..> CarEventArgs : <<create>>
+MainForm ..> ResultsForm : ShowDialog()\nпісля парк-ферме
 MainForm ..> ChampionshipForm : ShowDialog()
+MainForm ..> GridStyle
+ResultsForm ..> GridStyle
+TrackPanel *--> "1" TrackRenderer
+TrackPanel --> ITrackSession
+TrackRenderer ..> ITrackSession : GetCarPositions()
+TrackPanel ..> CarEventArgs : <<create>>
 Program ..> MainForm : Application.Run
 @enduml

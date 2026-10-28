@@ -20,6 +20,9 @@ rectangle "F1 Race Simulator" {
   usecase "Зберегти чемпіонат у файл" as UC12
   usecase "Відкрити чемпіонат з файлу" as UC13
   usecase "Скинути результати сезону" as UC14
+  usecase "Пропустити кваліфікацію" as UC15
+  usecase "Переглянути телеметрію\nвсіх пілотів" as UC16
+  usecase "Перейти до наступного\nетапу" as UC17
 }
 
 User --> UC1
@@ -33,6 +36,11 @@ User --> UC11
 User --> UC12
 User --> UC13
 User --> UC14
+User --> UC15
+User --> UC16
+User --> UC17
+UC15 ..> UC3 : <<extend>>
+UC17 ..> UC9 : <<extend>>\nз вікна результатів
 
 UC1 ..> UC2 : <<include>>
 UC2 ..> UC3 : <<include>>

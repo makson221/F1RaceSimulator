@@ -1,6 +1,6 @@
 @startuml state-car
 !include _style.iuml
-title Діаграма станів боліда (CarState)
+title Діаграма станів боліда (CarState і PostRaceStage)
 
 [*] --> OnTrack : Race.Start()\nPlaceOnGrid()
 
@@ -13,6 +13,15 @@ OnTrack --> Finished : Finish()\n[клетчастий прапор]
 InPitLane --> Finished : Finish()
 OnTrack --> Retired : Retire()\n[технічна несправність]
 
-Finished --> [*]
+state Finished {
+  [*] --> CoolDownLap : очки нараховано,\nпротокол остаточний
+  CoolDownLap : коло охолодження,\n60 % темпу
+  CoolDownLap --> PitLane : EnterParcFerme()\n[проїхав коло]
+  PitLane : в'їзд у парк-ферме
+  PitLane --> Parked : MoveToParcFerme()\n[доїхав до місця]
+  Parked : трійка — окремо,\nінші — у боксах
+}
+
+Finished --> [*] : усі в парк-ферме\n(CarsParked)
 Retired --> [*]
 @enduml

@@ -15,6 +15,9 @@ public sealed class FuelTank : CarComponent
     /// <summary>Резерв палива на початку гонки, кг.</summary>
     public const double ReserveKg = 3.0;
 
+    /// <summary>Скільки палива має залишитися після гонки для проби FIA, кг (≈1 л).</summary>
+    public const double SampleKg = 1.0;
+
     public override string Name => "Паливо";
 
     /// <summary>Скільки палива заправлено на старті, кг.</summary>
@@ -51,7 +54,7 @@ public sealed class FuelTank : CarComponent
         if (lapLengthKm <= 0) throw new ArgumentOutOfRangeException(nameof(lapLengthKm), "Довжина кола має бути додатною.");
 
         ConsumptionPerLap = lapLengthKm * KgPerKm;
-        CapacityKg = laps * ConsumptionPerLap + ReserveKg;
+        CapacityKg = laps * ConsumptionPerLap + ReserveKg + SampleKg;   // проба FIA теж заливається заздалегідь
         FuelKg = CapacityKg;
     }
 

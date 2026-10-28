@@ -50,6 +50,18 @@ public sealed class Track
     /// <summary>Геометрія схеми траси.</summary>
     public TrackLayout Layout { get; init; } = new();
 
+    /// <summary>Профіль швидкого кола за справжньою телеметрією F1 (швидкість, передачі, газ, гальмо).</summary>
+    public SpeedProfile Profile { get; init; } = new();
+
+    /// <summary>Номер сектора (1–3) для частки кола.</summary>
+    public int SectorAt(double fraction)
+    {
+        double f = Polyline.Wrap(fraction);
+        double[] s = Layout.Sectors;
+        if (s.Length < 2) return f < 1.0 / 3 ? 1 : f < 2.0 / 3 ? 2 : 3;
+        return f < s[0] ? 1 : f < s[1] ? 2 : 3;
+    }
+
     /// <summary>Дата гонки як <see cref="DateOnly"/> (або null, якщо формат невірний).</summary>
     [JsonIgnore]
     public DateOnly? RaceDate =>
@@ -61,9 +73,10 @@ public sealed class Track
 }
 
 /// <summary>
-/// Геометрія траси у власній системі координат. Точки побудовані за реальними
-/// GPS-координатами трас (набір даних f1-circuits) і орієнтовані як на карті: північ угорі.
-/// Розмір системи координат (<see cref="Width"/> × <see cref="Height"/>) залежить від форми траси.
+/// Геометрія траси у власній системі координат. Контур побудовано за даними хронометражу F1
+/// (позиції болідів на швидкому колі), повернутими до офіційної орієнтації карти F1.
+/// Перша точка — лінія старту/фінішу. Розмір системи координат
+/// (<see cref="Width"/> × <see cref="Height"/>) залежить від форми траси.
 /// </summary>
 public sealed class TrackLayout
 {
@@ -90,6 +103,21 @@ public sealed class TrackLayout
 
     /// <summary>Чи потрібна виносна лінія від підпису до лінії старту.</summary>
     public bool LabelLeader { get; init; }
+
+    /// <summary>Межі секторів 1/2 і 2/3 як частки кола (за офіційним хронометражем).</summary>
+    public double[] Sectors { get; init; } = Array.Empty<double>();
+
+    /// <summary>Повороти з офіційною нумерацією.</summary>
+    public TurnMarker[] Turns { get; init; } = Array.Empty<TurnMarker>();
+
+    /// <summary>
+    /// Орієнтація схеми: "official" — як на офіційній карті F1 (кут Rotation з даних хронометражу),
+    /// "north" — північ угорі (для нових трас без офіційних даних).
+    /// </summary>
+    public string Orientation { get; init; } = "north";
+
+    /// <summary>Кут повороту координат телеметрії до офіційної орієнтації, градуси.</summary>
+    public double Rotation { get; init; }
 
     /// <summary>Ширина системи координат схеми.</summary>
     public double Width { get; init; } = 340;

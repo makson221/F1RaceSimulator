@@ -30,4 +30,20 @@ public static class UkrainianText
 
     /// <summary>Число разом зі словом «очко», наприклад «18 очок».</summary>
     public static string Points(int n) => $"{n} {PointsWord(n)}";
+
+    /// <summary>Правильна форма слова «хвилина»: 1 хвилина, 2 хвилини, 18 хвилин.</summary>
+    public static string MinutesWord(int n) => Form(n, "хвилина", "хвилини", "хвилин");
+
+    /// <summary>Число разом зі словом «хвилина», наприклад «18 хвилин».</summary>
+    public static string Minutes(int n) => $"{n} {MinutesWord(n)}";
+
+    /// <summary>Вибір форми слова за числом: одна (1, 21), кілька (2–4, 22–24), багато (5–20).</summary>
+    public static string Form(int n, string one, string few, string many)
+    {
+        int lastTwo = Math.Abs(n) % 100;
+        int last = lastTwo % 10;
+        if (last == 1 && lastTwo != 11) return one;
+        if (last is >= 2 and <= 4 && (lastTwo < 12 || lastTwo > 14)) return few;
+        return many;
+    }
 }

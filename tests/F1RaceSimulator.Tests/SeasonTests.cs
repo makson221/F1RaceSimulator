@@ -110,6 +110,47 @@ public class SeasonTests
         championship.Reset();
     }
 
+    [Fact]
+    public void Championship_AccumulatesPointsAfterEveryGrandPrix()
+    {
+        var championship = Championship.Instance;
+        championship.Reset();
+        var data = TestHelpers.Season;
+
+        // Два етапи поспіль: очки підсумовуються, а таблицю можна подивитися «після 1-го етапу».
+        var first = data.Tracks[0];
+        var second = data.NextTrackAfter(first)!;
+        Assert.Equal(first.Round + 1, second.Round);
+
+        foreach (var (track, seed) in new[] { (first, 11), (second, 12) })
+        {
+            var race = new Race(track, CarFactory.CreateCars(data), new SystemRandomSource(seed), 0);
+            race.RunToCompletion();
+            Assert.True(race.IsCompleted);
+            championship.AddRaceResult(track, race.GetResults());
+        }
+
+        Assert.Equal(2, championship.Races.Count);
+        Assert.Equal(2 * 101, championship.GetDriverStandings().Sum(r => r.Points));
+        Assert.Equal(101, championship.GetDriverStandings(first.Round).Sum(r => r.Points));
+
+        var leader = championship.GetDriverStandings()[0];
+        int secondRacePoints = championship.Races[1].Results.Single(e => e.DriverCode == leader.Code).Points;
+        Assert.Equal(leader.Points - secondRacePoints, championship.PointsBefore(leader.Code, second.Round));
+        Assert.True(championship.HasRound(second.Round));
+        Assert.Equal(data.Teams.Count, championship.GetTeamStandings().Count);
+
+        championship.Reset();
+    }
+
+    [Fact]
+    public void Calendar_NextTrackAfterLastRoundIsNull()
+    {
+        var data = TestHelpers.Season;
+        Assert.Null(data.NextTrackAfter(data.Tracks[^1]));
+        Assert.Same(data.Tracks[1], data.NextTrackAfter(data.Tracks[0]));
+    }
+
     [Theory]
     [InlineData(1, 25)]
     [InlineData(3, 15)]
