@@ -11,13 +11,18 @@ namespace F1RaceSimulator.WinForms;
 /// </summary>
 public partial class ResultsForm : Form
 {
-    private static readonly Color GoodColor = Color.FromArgb(22, 112, 59);
-    private static readonly Color BadColor = Color.FromArgb(179, 34, 34);
+    private static Color GoodColor => ThemeManager.Current.Good;
+    private static Color BadColor => ThemeManager.Current.Danger;
+
+    /// <summary>Висота рядка: 22 пілоти мають поміститися без прокручування.</summary>
+    private const int RowHeight = 26;
 
     public ResultsForm(Race race, Track? nextTrack)
     {
         ArgumentNullException.ThrowIfNull(race);
         InitializeComponent();
+        lblInfo.Tag = "muted";
+        ThemeManager.Attach(this);
 
         Track track = race.Track;
         lblTitle.Text = $"{track.GrandPrix} 2026 — результати";
@@ -40,9 +45,23 @@ public partial class ResultsForm : Form
         }
     }
 
+    /// <summary>
+    /// Вікно займає майже весь екран, щоб протокол і таблиця чемпіонату
+    /// були видні повністю, без прокручування і обрізаних імен.
+    /// </summary>
+    protected override void OnLoad(EventArgs e)
+    {
+        base.OnLoad(e);
+        Rectangle area = Screen.FromControl(Owner ?? this).WorkingArea;
+        Size = new Size(Math.Min(1600, area.Width - 40), Math.Min(960, area.Height - 30));
+        split.SplitterDistance = (int)(split.Width * 0.57);
+        if (Owner != null) CenterToParent(); else CenterToScreen();
+    }
+
     private void FillRace(Race race)
     {
-        GridStyle.Setup(dgvRace, ("Поз", 7), ("Пілот", 24), ("Команда", 20), ("Старт", 8), ("Статус", 16), ("Найкраще коло", 16), ("Очки", 9));
+        GridStyle.Setup(dgvRace, ("Поз", 6), ("Пілот", 24), ("Команда", 19), ("Старт", 7), ("Статус", 19), ("Найкраще коло", 15), ("Очки", 8));
+        dgvRace.RowTemplate.Height = RowHeight;
         foreach (RaceResult r in race.GetResults())
         {
             int index = dgvRace.Rows.Add(
@@ -55,7 +74,7 @@ public partial class ResultsForm : Form
                 r.Points > 0 ? "+" + r.Points : "");
             DataGridViewRow row = dgvRace.Rows[index];
             if (r.Points > 0) row.Cells[6].Style.ForeColor = GoodColor;
-            if (r.Car == race.FastestLapCar) row.Cells[5].Style.ForeColor = Color.FromArgb(128, 0, 160);
+            if (r.Car == race.FastestLapCar) row.Cells[5].Style.ForeColor = ThemeManager.Current.Purple;
             if (r.Position <= 3 && r.Car.State == CarState.Finished)
                 row.DefaultCellStyle.Font = new Font(dgvRace.Font, FontStyle.Bold);
         }
@@ -70,7 +89,8 @@ public partial class ResultsForm : Form
             .ToDictionary(e => e.DriverCode, e => e.Points) ?? new Dictionary<string, int>();
 
         grpChampionship.Text = $"Чемпіонат пілотів після {round}-го етапу";
-        GridStyle.Setup(dgvChampionship, ("Поз", 9), ("±", 9), ("Пілот", 34), ("Команда", 26), ("Очки", 12), ("Етап", 10));
+        GridStyle.Setup(dgvChampionship, ("Поз", 8), ("±", 8), ("Пілот", 34), ("Команда", 28), ("Очки", 11), ("Етап", 11));
+        dgvChampionship.RowTemplate.Height = RowHeight;
         foreach (StandingRow row in championship.GetDriverStandings())
         {
             string change = "";

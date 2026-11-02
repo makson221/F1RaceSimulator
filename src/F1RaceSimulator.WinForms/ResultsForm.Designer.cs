@@ -54,9 +54,9 @@ namespace F1RaceSimulator.WinForms
             // lblTitle
             //
             this.lblTitle.Dock = System.Windows.Forms.DockStyle.Top;
-            this.lblTitle.Font = new System.Drawing.Font("Segoe UI", 14F, System.Drawing.FontStyle.Bold);
+            this.lblTitle.Font = new System.Drawing.Font("Segoe UI", 16F, System.Drawing.FontStyle.Bold);
             this.lblTitle.Name = "lblTitle";
-            this.lblTitle.Size = new System.Drawing.Size(984, 34);
+            this.lblTitle.Size = new System.Drawing.Size(1284, 40);
             this.lblTitle.TabIndex = 0;
             this.lblTitle.Text = "Результати";
             //
@@ -65,7 +65,7 @@ namespace F1RaceSimulator.WinForms
             this.lblInfo.Dock = System.Windows.Forms.DockStyle.Top;
             this.lblInfo.ForeColor = System.Drawing.Color.FromArgb(91, 104, 121);
             this.lblInfo.Name = "lblInfo";
-            this.lblInfo.Size = new System.Drawing.Size(984, 24);
+            this.lblInfo.Size = new System.Drawing.Size(1284, 28);
             this.lblInfo.TabIndex = 1;
             //
             // split
@@ -74,8 +74,8 @@ namespace F1RaceSimulator.WinForms
             this.split.Name = "split";
             this.split.Panel1.Controls.Add(this.grpRace);
             this.split.Panel2.Controls.Add(this.grpChampionship);
-            this.split.Size = new System.Drawing.Size(984, 480);
-            this.split.SplitterDistance = 560;
+            this.split.Size = new System.Drawing.Size(1284, 700);
+            this.split.SplitterDistance = 730;
             this.split.SplitterWidth = 8;
             this.split.TabIndex = 2;
             //
@@ -115,7 +115,7 @@ namespace F1RaceSimulator.WinForms
             this.panelBottom.Controls.Add(this.btnClose);
             this.panelBottom.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.panelBottom.Name = "panelBottom";
-            this.panelBottom.Size = new System.Drawing.Size(984, 46);
+            this.panelBottom.Size = new System.Drawing.Size(1284, 50);
             this.panelBottom.TabIndex = 3;
             //
             // btnNext
@@ -123,9 +123,9 @@ namespace F1RaceSimulator.WinForms
             this.btnNext.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnNext.DialogResult = System.Windows.Forms.DialogResult.OK;
             this.btnNext.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
-            this.btnNext.Location = new System.Drawing.Point(560, 8);
+            this.btnNext.Location = new System.Drawing.Point(822, 10);
             this.btnNext.Name = "btnNext";
-            this.btnNext.Size = new System.Drawing.Size(310, 32);
+            this.btnNext.Size = new System.Drawing.Size(340, 34);
             this.btnNext.TabIndex = 0;
             this.btnNext.Text = "Наступний етап ▶";
             this.btnNext.UseVisualStyleBackColor = true;
@@ -134,9 +134,9 @@ namespace F1RaceSimulator.WinForms
             //
             this.btnClose.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnClose.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnClose.Location = new System.Drawing.Point(880, 8);
+            this.btnClose.Location = new System.Drawing.Point(1172, 10);
             this.btnClose.Name = "btnClose";
-            this.btnClose.Size = new System.Drawing.Size(96, 32);
+            this.btnClose.Size = new System.Drawing.Size(104, 34);
             this.btnClose.TabIndex = 1;
             this.btnClose.Text = "Закрити";
             this.btnClose.UseVisualStyleBackColor = true;
@@ -147,14 +147,14 @@ namespace F1RaceSimulator.WinForms
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.btnClose;
-            this.ClientSize = new System.Drawing.Size(1000, 600);
+            this.ClientSize = new System.Drawing.Size(1300, 820);
             this.Controls.Add(this.split);
             this.Controls.Add(this.panelBottom);
             this.Controls.Add(this.lblInfo);
             this.Controls.Add(this.lblTitle);
             this.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.MinimizeBox = false;
-            this.MinimumSize = new System.Drawing.Size(800, 500);
+            this.MinimumSize = new System.Drawing.Size(1000, 640);
             this.Name = "ResultsForm";
             this.Padding = new System.Windows.Forms.Padding(8);
             this.ShowInTaskbar = false;

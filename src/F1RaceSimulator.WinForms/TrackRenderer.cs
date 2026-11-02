@@ -14,10 +14,11 @@ namespace F1RaceSimulator.WinForms;
 /// </summary>
 public sealed class TrackRenderer
 {
-    private static readonly Color TrackColor = Color.FromArgb(52, 60, 72);
-    private static readonly Color PitLaneColor = Color.FromArgb(192, 57, 43);
-    private static readonly Color AccentColor = Color.FromArgb(10, 98, 191);
-    private static readonly Color LabelColor = Color.FromArgb(26, 35, 48);
+    // Кольори траси залежать від теми (світла / темна) і беруться під час малювання.
+    private static Color TrackColor => ThemeManager.Current.Track;
+    private static Color PitLaneColor => ThemeManager.Current.PitLane;
+    private static Color AccentColor => ThemeManager.Current.Accent;
+    private static Color LabelColor => ThemeManager.Current.Text;
 
     /// <summary>Кольори секторів, як на офіційних картах: червоний, синій, жовтий.</summary>
     private static readonly Color[] SectorColors =
@@ -89,7 +90,7 @@ public sealed class TrackRenderer
         {
             var a = Map(new Vec2(layout.StartFinish[0], layout.StartFinish[1]));
             var b = Map(new Vec2(layout.StartFinish[2], layout.StartFinish[3]));
-            using (var linePen = new Pen(Color.Black, Math.Max(2.5f, 2f * scale)))
+            using (var linePen = new Pen(ThemeManager.Current.StartLine, Math.Max(2.5f, 2f * scale)))
                 g.DrawLine(linePen, a, b);
 
             if (layout.LabelPosition.Length == 2)
@@ -102,7 +103,7 @@ public sealed class TrackRenderer
                 {
                     var mid = new PointF((a.X + b.X) / 2, (a.Y + b.Y) / 2);
                     float y = rect.Bottom < mid.Y ? rect.Bottom : rect.Top;
-                    using var leaderPen = new Pen(Color.Gray, 1f) { DashStyle = DashStyle.Dash };
+                    using var leaderPen = new Pen(ThemeManager.Current.Muted, 1f) { DashStyle = DashStyle.Dash };
                     g.DrawLine(leaderPen, label.X, y, mid.X, mid.Y);
                 }
                 g.DrawString(text, font, labelBrush, rect.Location);
@@ -126,7 +127,7 @@ public sealed class TrackRenderer
             bool isSelected = cp.Car == selected;
             using (var fill = new SolidBrush(ColorOf(cp.Car.Team)))
                 g.FillEllipse(fill, p.X - radius, p.Y - radius, radius * 2, radius * 2);
-            using (var outline = new Pen(Color.White, 1f))
+            using (var outline = new Pen(ThemeManager.Current.Halo, 1f))
                 g.DrawEllipse(outline, p.X - radius, p.Y - radius, radius * 2, radius * 2);
 
             if (isSelected)
@@ -141,7 +142,7 @@ public sealed class TrackRenderer
             {
                 SizeF size = g.MeasureString(text, font);
                 var textPoint = new PointF(p.X - size.Width / 2, p.Y - radius - size.Height);
-                using var halo = new SolidBrush(Color.FromArgb(200, Color.White));
+                using var halo = new SolidBrush(Color.FromArgb(200, ThemeManager.Current.Halo));
                 g.FillRectangle(halo, textPoint.X + 2, textPoint.Y + 2, size.Width - 4, size.Height - 4);
                 g.DrawString(text, font, labelBrush, textPoint);
             }
@@ -182,9 +183,9 @@ public sealed class TrackRenderer
         if (layout.Turns.Length == 0) return;
         float r = Math.Clamp(4.6f * scale, 6f, 9f);
         using var font = new Font("Segoe UI", Math.Clamp(r * 0.95f, 6f, 8.5f), FontStyle.Bold, GraphicsUnit.Pixel);
-        using var fill = new SolidBrush(Color.White);
-        using var border = new Pen(Color.FromArgb(70, 80, 92), 1f);
-        using var text = new SolidBrush(Color.FromArgb(30, 36, 44));
+        using var fill = new SolidBrush(ThemeManager.Current.TurnFill);
+        using var border = new Pen(ThemeManager.Current.TurnBorder, 1f);
+        using var text = new SolidBrush(ThemeManager.Current.Text);
         using var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
         foreach (TurnMarker turn in layout.Turns)
         {

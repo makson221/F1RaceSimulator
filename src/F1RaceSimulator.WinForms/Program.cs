@@ -28,6 +28,7 @@ internal static class Program
             return;
         }
 
+        ThemeManager.Load();   // збережена тема (світла, темна або як у Windows)
         Application.Run(new MainForm(data));
     }
 }

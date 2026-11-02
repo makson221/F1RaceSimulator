@@ -16,7 +16,7 @@ public sealed class TrackPanel : Panel
     {
         DoubleBuffered = true;
         ResizeRedraw = true;
-        BackColor = Color.White;
+        BackColor = ThemeManager.Current.Panel;
     }
 
     /// <summary>Траса, яку потрібно намалювати.</summary>
@@ -46,7 +46,7 @@ public sealed class TrackPanel : Panel
         if (Track == null)
         {
             TextRenderer.DrawText(e.Graphics, "Оберіть етап у списку «Етап».", Font, ClientRectangle,
-                Color.Gray, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                ThemeManager.Current.Muted, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
             return;
         }
         _renderer.Draw(e.Graphics, ClientRectangle, Track, Session, SelectedCar);

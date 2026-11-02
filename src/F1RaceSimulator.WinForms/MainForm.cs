@@ -25,17 +25,19 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
     private const int MaxLogLines = 400;
     private const double FlashSeconds = 2.5;
 
-    private static readonly Color SelectedRowColor = Color.FromArgb(217, 231, 248);
-    private static readonly Color GainedRowColor = Color.FromArgb(219, 241, 226);
-    private static readonly Color LostRowColor = Color.FromArgb(251, 226, 226);
-    private static readonly Color DropZoneColor = Color.FromArgb(253, 240, 240);
-    private static readonly Color SoftColor = Color.FromArgb(196, 38, 38);
-    private static readonly Color MediumColor = Color.FromArgb(168, 115, 0);
-    private static readonly Color WarningColor = Color.FromArgb(154, 88, 0);
-    private static readonly Color DangerColor = Color.FromArgb(179, 34, 34);
-    private static readonly Color GoodColor = Color.FromArgb(22, 112, 59);
-    private static readonly Color PurpleColor = Color.FromArgb(128, 0, 160);
-    private static readonly Color MutedColor = Color.FromArgb(120, 128, 140);
+    // Кольори таблиць залежать від теми (меню «Вигляд»), тому читаються щоразу з ThemeManager.
+    private static Theme T => ThemeManager.Current;
+    private static Color SelectedRowColor => T.Selection;
+    private static Color GainedRowColor => T.Gained;
+    private static Color LostRowColor => T.Lost;
+    private static Color DropZoneColor => T.DropZone;
+    private static Color SoftColor => T.SoftTyre;
+    private static Color MediumColor => T.MediumTyre;
+    private static Color WarningColor => T.Warning;
+    private static Color DangerColor => T.Danger;
+    private static Color GoodColor => T.Good;
+    private static Color PurpleColor => T.Purple;
+    private static Color MutedColor => T.Muted;
 
     private readonly SeasonData _data;
     private readonly IRandomSource _random = new SystemRandomSource();
@@ -66,6 +68,12 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
         InitializeComponent();
         GridStyle.EnableDoubleBuffering(dgvStandings);
         SetupGrids();
+
+        // Тема оформлення: вікно перефарбовується щоразу, коли користувач її змінює.
+        ThemeManager.Attach(this);
+        ThemeManager.Changed += OnThemeChanged;
+        FormClosed += (_, _) => ThemeManager.Changed -= OnThemeChanged;
+        UpdateThemeMenu();
 
         _autosavePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -377,15 +385,15 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
                 double? time = q.Best(segments[s]);
                 DataGridViewCell cell = row.Cells[4 + s];
                 cell.Value = time == null ? "" : LapTimer.Format(time);
-                cell.Style.ForeColor = time != null && time == fastest[s] ? PurpleColor : Color.Black;
+                cell.Style.ForeColor = time != null && time == fastest[s] ? PurpleColor : T.Text;
             }
             row.Cells[7].Value = q.StageText;
             row.Cells[7].Style.ForeColor = q.Stage == QualifyingStage.FlyingLap ? GoodColor : MutedColor;
 
             bool inDropZone = !q.IsEliminated && !_qualifying.IsCompleted && q.Position > advance && advance > 0;
-            Color back = q.Car == _selected ? SelectedRowColor : inDropZone ? DropZoneColor : Color.White;
+            Color back = q.Car == _selected ? SelectedRowColor : inDropZone ? DropZoneColor : T.Panel;
             row.DefaultCellStyle.BackColor = row.DefaultCellStyle.SelectionBackColor = back;
-            row.DefaultCellStyle.ForeColor = q.IsEliminated ? Color.Gray : Color.Black;
+            row.DefaultCellStyle.ForeColor = q.IsEliminated ? T.Muted : T.Text;
             row.DefaultCellStyle.Font = q.Car == _selected ? _boldFont : null;
         }
         dgvQualifying.ClearSelection();
@@ -440,7 +448,7 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
             else if (retired)
             {
                 tyreCell.Value = "—";
-                tyreCell.Style.ForeColor = Color.Gray;
+                tyreCell.Style.ForeColor = T.Muted;
             }
             else
             {
@@ -449,7 +457,7 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
                     car.Tyre.Condition < car.Strategy.Threshold ? DangerColor :
                     car.Tyre.Condition < 50 ? WarningColor :
                     car.Tyre.Compound == TyreCompound.Soft ? SoftColor :
-                    car.Tyre.Compound == TyreCompound.Medium ? MediumColor : Color.Black;
+                    car.Tyre.Compound == TyreCompound.Medium ? MediumColor : T.Text;
             }
 
             // Очки за поточну позицію (після фінішу — остаточні).
@@ -461,11 +469,11 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
             Color back = car == _selected ? SelectedRowColor
                 : change > 0 ? GainedRowColor
                 : change < 0 ? LostRowColor
-                : Color.White;
+                : T.Panel;
             row.DefaultCellStyle.BackColor = back;
             row.DefaultCellStyle.SelectionBackColor = back;
-            row.DefaultCellStyle.SelectionForeColor = retired ? Color.Gray : Color.Black;
-            row.DefaultCellStyle.ForeColor = retired ? Color.Gray : Color.Black;
+            row.DefaultCellStyle.SelectionForeColor = retired ? T.Muted : T.Text;
+            row.DefaultCellStyle.ForeColor = retired ? T.Muted : T.Text;
             row.DefaultCellStyle.Font = car == _selected ? _boldFont : null;
         }
 
@@ -507,10 +515,10 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
                     LapTimer.Format(car.Timing.LastLap), LapTimer.Format(car.Timing.BestLap));
 
                 DataGridViewRow row = dgvTelemetry.Rows[i];
-                row.Cells[11].Style.ForeColor = car.Engine.Status == ComponentStatus.Normal ? Color.Black : DangerColor;
-                row.Cells[10].Style.ForeColor = car.Tyre.IsOverheating ? DangerColor : Color.Black;
-                row.Cells[15].Style.ForeColor = car == _race.FastestLapCar ? PurpleColor : Color.Black;
-                row.DefaultCellStyle.ForeColor = car.State == CarState.Retired ? Color.Gray : Color.Black;
+                row.Cells[11].Style.ForeColor = car.Engine.Status == ComponentStatus.Normal ? T.Text : DangerColor;
+                row.Cells[10].Style.ForeColor = car.Tyre.IsOverheating ? DangerColor : T.Text;
+                row.Cells[15].Style.ForeColor = car == _race.FastestLapCar ? PurpleColor : T.Text;
+                row.DefaultCellStyle.ForeColor = car.State == CarState.Retired ? T.Muted : T.Text;
             }
         }
         dgvTelemetry.ClearSelection();
@@ -530,7 +538,7 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
         row.Cells[6].Value = $"{t.Throttle}%";
         row.Cells[7].Value = t.Brake ? "■ ТАК" : "";
         row.Cells[7].Style.ForeColor = DangerColor;
-        row.Cells[6].Style.ForeColor = t.Throttle >= 95 ? GoodColor : Color.Black;
+        row.Cells[6].Style.ForeColor = t.Throttle >= 95 ? GoodColor : T.Text;
         row.Cells[8].Value = mode;
         row.Cells[9].Value = tyre;
         row.Cells[10].Value = tyreTemp;
@@ -539,7 +547,7 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
         row.Cells[13].Value = ers;
         row.Cells[14].Value = last;
         row.Cells[15].Value = best;
-        Color back = car == _selected ? SelectedRowColor : Color.White;
+        Color back = car == _selected ? SelectedRowColor : T.Panel;
         row.DefaultCellStyle.BackColor = row.DefaultCellStyle.SelectionBackColor = back;
     }
 
@@ -806,6 +814,34 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
     }
 
     private void MnuExit_Click(object? sender, EventArgs e) => Close();
+
+    // ------------------------------------------------------------------
+    // Тема оформлення
+    // ------------------------------------------------------------------
+
+    private void MnuThemeToggle_Click(object? sender, EventArgs e) => ThemeManager.Toggle();
+
+    private void MnuThemeLight_Click(object? sender, EventArgs e) => ThemeManager.SetMode(ThemeMode.Light);
+
+    private void MnuThemeDark_Click(object? sender, EventArgs e) => ThemeManager.SetMode(ThemeMode.Dark);
+
+    private void MnuThemeSystem_Click(object? sender, EventArgs e) => ThemeManager.SetMode(ThemeMode.System);
+
+    /// <summary>Після зміни теми перемальовуємо таблиці (кольори рядків задаються під час оновлення).</summary>
+    private void OnThemeChanged(object? sender, EventArgs e)
+    {
+        UpdateThemeMenu();
+        RefreshAll();
+        RefreshSeason();
+        if (tabRight.SelectedTab == tabTelemetry) RefreshTelemetryGrid();
+    }
+
+    private void UpdateThemeMenu()
+    {
+        mnuThemeLight.Checked = ThemeManager.Mode == ThemeMode.Light;
+        mnuThemeDark.Checked = ThemeManager.Mode == ThemeMode.Dark;
+        mnuThemeSystem.Checked = ThemeManager.Mode == ThemeMode.System;
+    }
 
     private void MainForm_FormClosing(object? sender, FormClosingEventArgs e)
     {

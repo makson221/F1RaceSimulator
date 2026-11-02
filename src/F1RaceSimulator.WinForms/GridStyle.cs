@@ -4,13 +4,10 @@ namespace F1RaceSimulator.WinForms;
 
 /// <summary>
 /// Однакове оформлення таблиць (DataGridView) у всіх вікнах програми:
-/// лише читання, без заголовків рядків, світлий заголовок, подвійна буферизація.
+/// лише читання, без заголовків рядків, подвійна буферизація; кольори — з поточної теми.
 /// </summary>
 public static class GridStyle
 {
-    private static readonly Color HeaderBack = Color.FromArgb(237, 241, 246);
-    private static readonly Color HeaderFore = Color.FromArgb(91, 104, 121);
-
     /// <summary>Налаштовує таблицю і створює стовпці (назва, вага ширини).</summary>
     public static void Setup(DataGridView grid, params (string Header, float Weight)[] columns)
     {
@@ -22,20 +19,16 @@ public static class GridStyle
         grid.MultiSelect = false;
         grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         grid.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-        grid.BackgroundColor = Color.White;
         grid.BorderStyle = BorderStyle.None;
         grid.EnableHeadersVisualStyles = false;
         grid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
         grid.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
         {
-            BackColor = HeaderBack,
-            ForeColor = HeaderFore,
             Font = new Font("Segoe UI", 8.25F, FontStyle.Bold),
             Alignment = DataGridViewContentAlignment.MiddleLeft,
             WrapMode = DataGridViewTriState.True
         };
-        grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(217, 231, 248);
-        grid.DefaultCellStyle.SelectionForeColor = Color.Black;
+        ThemeManager.ApplyGrid(grid);
         EnableDoubleBuffering(grid);
 
         grid.Columns.Clear();

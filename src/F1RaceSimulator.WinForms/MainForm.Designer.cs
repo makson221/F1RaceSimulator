@@ -46,6 +46,12 @@ namespace F1RaceSimulator.WinForms
             this.mnuSeason = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuStandings = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuResetSeason = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuView = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuThemeToggle = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuViewSeparator = new System.Windows.Forms.ToolStripSeparator();
+            this.mnuThemeLight = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuThemeDark = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuThemeSystem = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuHelp = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuAbout = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStrip = new System.Windows.Forms.ToolStrip();
@@ -126,6 +132,7 @@ namespace F1RaceSimulator.WinForms
             this.mnuFile,
             this.mnuRace,
             this.mnuSeason,
+            this.mnuView,
             this.mnuHelp});
             this.menuStrip.Location = new System.Drawing.Point(0, 0);
             this.menuStrip.Name = "menuStrip";
@@ -224,6 +231,46 @@ namespace F1RaceSimulator.WinForms
             this.mnuResetSeason.Name = "mnuResetSeason";
             this.mnuResetSeason.Text = "Скинути результати сезону";
             this.mnuResetSeason.Click += new System.EventHandler(this.MnuResetSeason_Click);
+            //
+            // mnuView
+            //
+            this.mnuView.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.mnuThemeToggle,
+            this.mnuViewSeparator,
+            this.mnuThemeLight,
+            this.mnuThemeDark,
+            this.mnuThemeSystem});
+            this.mnuView.Name = "mnuView";
+            this.mnuView.Text = "&Вигляд";
+            //
+            // mnuThemeToggle
+            //
+            this.mnuThemeToggle.Name = "mnuThemeToggle";
+            this.mnuThemeToggle.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.T)));
+            this.mnuThemeToggle.Text = "Перемкнути світлу / темну тему";
+            this.mnuThemeToggle.Click += new System.EventHandler(this.MnuThemeToggle_Click);
+            //
+            // mnuViewSeparator
+            //
+            this.mnuViewSeparator.Name = "mnuViewSeparator";
+            //
+            // mnuThemeLight
+            //
+            this.mnuThemeLight.Name = "mnuThemeLight";
+            this.mnuThemeLight.Text = "Світла тема";
+            this.mnuThemeLight.Click += new System.EventHandler(this.MnuThemeLight_Click);
+            //
+            // mnuThemeDark
+            //
+            this.mnuThemeDark.Name = "mnuThemeDark";
+            this.mnuThemeDark.Text = "Темна тема";
+            this.mnuThemeDark.Click += new System.EventHandler(this.MnuThemeDark_Click);
+            //
+            // mnuThemeSystem
+            //
+            this.mnuThemeSystem.Name = "mnuThemeSystem";
+            this.mnuThemeSystem.Text = "Як у Windows";
+            this.mnuThemeSystem.Click += new System.EventHandler(this.MnuThemeSystem_Click);
             //
             // mnuHelp
             //
@@ -344,6 +391,7 @@ namespace F1RaceSimulator.WinForms
             //
             this.tslSession.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.tslSession.ForeColor = System.Drawing.Color.FromArgb(10, 98, 191);
+            this.tslSession.Tag = "accent";
             this.tslSession.Name = "tslSession";
             this.tslSession.Text = "Кваліфікація";
             //
@@ -709,6 +757,12 @@ namespace F1RaceSimulator.WinForms
         private System.Windows.Forms.ToolStripMenuItem mnuSeason;
         private System.Windows.Forms.ToolStripMenuItem mnuStandings;
         private System.Windows.Forms.ToolStripMenuItem mnuResetSeason;
+        private System.Windows.Forms.ToolStripMenuItem mnuView;
+        private System.Windows.Forms.ToolStripMenuItem mnuThemeToggle;
+        private System.Windows.Forms.ToolStripSeparator mnuViewSeparator;
+        private System.Windows.Forms.ToolStripMenuItem mnuThemeLight;
+        private System.Windows.Forms.ToolStripMenuItem mnuThemeDark;
+        private System.Windows.Forms.ToolStripMenuItem mnuThemeSystem;
         private System.Windows.Forms.ToolStripMenuItem mnuHelp;
         private System.Windows.Forms.ToolStripMenuItem mnuAbout;
         private System.Windows.Forms.ToolStrip toolStrip;

@@ -14,18 +14,19 @@ namespace F1RaceSimulator.WinForms;
 /// </summary>
 public sealed class TelemetryPanel : Control
 {
-    private static readonly Color NormalColor = Color.FromArgb(46, 139, 87);
-    private static readonly Color WarningColor = Color.FromArgb(214, 137, 16);
-    private static readonly Color CriticalColor = Color.FromArgb(192, 57, 43);
-    private static readonly Color ColdColor = Color.FromArgb(52, 120, 200);
-    private static readonly Color ScaleBackColor = Color.FromArgb(232, 236, 241);
-    private static readonly Color WindowZoneColor = Color.FromArgb(198, 232, 206);
-    private static readonly Color HotZoneColor = Color.FromArgb(250, 222, 186);
-    private static readonly Color DangerZoneColor = Color.FromArgb(245, 196, 190);
-    private static readonly Color TextColor = Color.FromArgb(26, 35, 48);
-    private static readonly Color MutedColor = Color.FromArgb(96, 108, 122);
-    private static readonly Color SpeedColor = Color.FromArgb(10, 98, 191);
-    private static readonly Color RpmColor = Color.FromArgb(120, 82, 200);
+    // Кольори беруться з поточної теми під час кожного малювання.
+    private static Color NormalColor => ThemeManager.Current.GaugeNormal;
+    private static Color WarningColor => ThemeManager.Current.GaugeWarning;
+    private static Color CriticalColor => ThemeManager.Current.GaugeCritical;
+    private static Color ColdColor => ThemeManager.Current.GaugeCold;
+    private static Color ScaleBackColor => ThemeManager.Current.GaugeBack;
+    private static Color WindowZoneColor => ThemeManager.Current.ZoneWindow;
+    private static Color HotZoneColor => ThemeManager.Current.ZoneHot;
+    private static Color DangerZoneColor => ThemeManager.Current.ZoneDanger;
+    private static Color TextColor => ThemeManager.Current.Text;
+    private static Color MutedColor => ThemeManager.Current.Muted;
+    private static Color SpeedColor => ThemeManager.Current.Accent;
+    private static Color RpmColor => ThemeManager.Current.GaugeRpm;
 
     /// <summary>Межі шкали температури шин, °C.</summary>
     private const double TyreScaleMin = 50, TyreScaleMax = 140;
@@ -42,7 +43,7 @@ public sealed class TelemetryPanel : Control
     {
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer |
                  ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
-        BackColor = Color.White;
+        BackColor = ThemeManager.Current.Panel;
     }
 
     /// <summary>Болід, телеметрію якого показує панель.</summary>
