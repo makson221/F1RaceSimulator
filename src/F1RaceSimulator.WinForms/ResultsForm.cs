@@ -29,7 +29,11 @@ public partial class ResultsForm : Form
         string fastest = race.FastestLapCar is { } fl
             ? $"Найшвидше коло: {fl.Driver.FullName}, {LapTimer.Format(race.FastestLap)}. "
             : string.Empty;
-        lblInfo.Text = $"Етап {track.Round} з 23 · {track.Circuit}, {UkrainianText.Laps(track.Laps)}. {fastest}Очки: 25-18-15-12-10-8-6-4-2-1.";
+        string neutral = race.SafetyCarCount + race.VirtualSafetyCarCount == 0
+            ? "без сейфті-кара"
+            : $"сейфті-кар: {race.SafetyCarCount}, VSC: {race.VirtualSafetyCarCount}";
+        lblInfo.Text = $"Етап {track.Round} з 23 · {track.Circuit}, {UkrainianText.Laps(track.Laps)}. {fastest}" +
+                       $"Обгонів: {race.TotalOvertakes} · {neutral} · очки: 25-18-15-12-10-8-6-4-2-1.";
 
         FillRace(race);
         FillChampionship(track.Round);

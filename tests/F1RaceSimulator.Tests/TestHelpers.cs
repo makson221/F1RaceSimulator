@@ -16,7 +16,7 @@ internal static class TestHelpers
     public static SeasonData Season => LazySeason.Value;
 
     /// <summary>Проста квадратна траса для тестів стратегій.</summary>
-    public static Track SquareTrack(int laps = 50, double wearFactor = 1.0) => new()
+    public static Track SquareTrack(int laps = 50, double wearFactor = 1.0, double overtaking = 0.5) => new()
     {
         Id = "test",
         Round = 99,
@@ -28,6 +28,7 @@ internal static class TestHelpers
         Laps = laps,
         TypicalLapSeconds = 80,
         TyreWearFactor = wearFactor,
+        Overtaking = overtaking,
         PitLaneSeconds = 20,
         Layout = new TrackLayout
         {
@@ -67,6 +68,9 @@ internal static class TestHelpers
         IPitStrategy? strategy = null, string code = "TST", double pace = 1.0) =>
         new(TestDriver(code, pace: pace), TestTeam(), TyreFactory.Create(compound, condition),
             strategy ?? new ThresholdPitStrategy(25));
+
+    /// <summary>Перебирає дані сезону: траса за ідентифікатором.</summary>
+    public static Track TrackById(string id) => Season.Tracks.First(t => t.Id == id);
 }
 
 /// <summary>Передбачуване «випадкове» джерело: завжди повертає одне число.</summary>

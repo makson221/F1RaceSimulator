@@ -18,6 +18,12 @@ public sealed class FuelTank : CarComponent
     /// <summary>Скільки палива має залишитися після гонки для проби FIA, кг (≈1 л).</summary>
     public const double SampleKg = 1.0;
 
+    /// <summary>
+    /// Частка звичайної витрати на колі без боротьби (прогрівальне коло, коло охолодження):
+    /// двигун працює на малих обертах.
+    /// </summary>
+    public const double EasyLapFactor = 0.3;
+
     public override string Name => "Паливо";
 
     /// <summary>Скільки палива заправлено на старті, кг.</summary>
@@ -45,7 +51,10 @@ public sealed class FuelTank : CarComponent
 
     public override string Summary => $"{FuelKg:0.0} кг (на {LapsLeft:0} кіл)";
 
-    /// <summary>Заправляє болід перед гонкою на всю дистанцію з невеликим резервом.</summary>
+    /// <summary>
+    /// Заправляє болід перед гонкою: дистанція, прогрівальне коло, невеликий резерв
+    /// і 1 кг проби для FIA.
+    /// </summary>
     /// <param name="laps">Кількість кіл гонки.</param>
     /// <param name="lapLengthKm">Довжина кола, км.</param>
     public void FillForRace(int laps, double lapLengthKm)
@@ -54,7 +63,8 @@ public sealed class FuelTank : CarComponent
         if (lapLengthKm <= 0) throw new ArgumentOutOfRangeException(nameof(lapLengthKm), "Довжина кола має бути додатною.");
 
         ConsumptionPerLap = lapLengthKm * KgPerKm;
-        CapacityKg = laps * ConsumptionPerLap + ReserveKg + SampleKg;   // проба FIA теж заливається заздалегідь
+        // Прогрівальне коло і проба FIA теж заливаються заздалегідь.
+        CapacityKg = (laps + EasyLapFactor) * ConsumptionPerLap + ReserveKg + SampleKg;
         FuelKg = CapacityKg;
     }
 

@@ -23,6 +23,15 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
     };
 
     private const int MaxLogLines = 400;
+
+    /// <summary>Скільки секунд після старту видно згаслі вогні, перш ніж табло почне зникати.</summary>
+    private const double LightsOutShowSeconds = 1.2;
+
+    /// <summary>За скільки секунд табло вогнів плавно зникає.</summary>
+    private const double LightsFadeSeconds = 0.6;
+
+    /// <summary>Коли згасли стартові вогні (для плавного зникнення табло).</summary>
+    private DateTime? _lightsOutAt;
     private const double FlashSeconds = 2.5;
 
     // Кольори таблиць залежать від теми (меню «Вигляд»), тому читаються щоразу з ThemeManager.
@@ -169,7 +178,7 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
         trackPanel.Session = _race;
         trackPanel.SelectedCar = _selected;
 
-        AppendLog($"Стартова решітка: поул — {results[0].Car.Driver.FullName} ({results[0].LapTimeText}). Натисніть «Старт гонки».");
+        AppendLog($"Стартова решітка: поул — {results[0].Car.Driver.FullName} ({results[0].LapTimeText}). Натисніть «Старт гонки» — почнеться прогрівальне коло.");
         ShowPhaseGrid();
         RefreshAll();
     }
@@ -190,6 +199,7 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
 
     private void ResetFlashes()
     {
+        _lightsOutAt = null;
         _lastPositions.Clear();
         _positionDelta.Clear();
         _flashUntil.Clear();
@@ -218,10 +228,13 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
         double realSeconds = Math.Min(0.1, (now - _lastTick).TotalSeconds);  // захист від «стрибка» після паузи
         _lastTick = now;
 
-        session.Step(realSeconds * _timeScale);
+        // Стартові вогні завжди в реальному часі: по одному вогню щосекунди, як на трасі.
+        bool lights = _phase == WeekendPhase.Race && _race is { StartPhase: RaceStartPhase.StartLights };
+        session.Step(realSeconds * (lights ? Math.Min(1, _timeScale) : _timeScale));
+        UpdateStartLights();
         trackPanel.Invalidate();
 
-        if (++_tickCounter % 4 == 0 || session.IsCompleted)
+        if (++_tickCounter % 4 == 0 || session.IsCompleted || lights)
             RefreshAll();
         else
             telemetryPanel.Invalidate();
@@ -274,7 +287,7 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
         }
         else if (_race is { IsCompleted: true }) text = "Гонку завершено";
         else if (_running) text = "Пауза";
-        else text = _race is { ElapsedSeconds: > 0 } ? "Продовжити" : "Старт гонки";
+        else text = _race is { SessionSeconds: > 0 } ? "Продовжити" : "Старт гонки";
 
         tsbStartPause.Text = (_running ? "❚❚ " : "▶ ") + text;
         mnuStartPause.Text = text;
@@ -301,7 +314,9 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
     /// <summary>Фініш обробляємо після кроку симуляції: очки — одразу, підсумки — коли всі в парк-ферме.</summary>
     public void OnRaceEvent(Race race, RaceEvent raceEvent)
     {
-        if (raceEvent.Type == RaceEventType.RaceFinished)
+        if (raceEvent.Type == RaceEventType.RaceStarted)
+            _lightsOutAt = DateTime.UtcNow;
+        else if (raceEvent.Type == RaceEventType.RaceFinished)
             _finishPending = true;
         else if (raceEvent.Type == RaceEventType.CarsParked)
             _parkedPending = true;
@@ -354,6 +369,7 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
         RefreshDriverCard();
         RefreshStatus();
         UpdateButtons();
+        UpdateStartLights();
         trackPanel.Invalidate();
     }
 
@@ -506,7 +522,7 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
                 Car car = list[i];
                 bool running = car.IsRunning || car.PostRace is PostRaceStage.CoolDownLap or PostRaceStage.PitLane;
                 FillTelemetryRow(dgvTelemetry.Rows[i], car, car.Position, car.Telemetry,
-                    car.State == CarState.OnTrack ? TelemetryPanel.ModeText(car) : TelemetryPanel.StateText(car),
+                    car.State == CarState.OnTrack ? TelemetryPanel.ModeText(car, _race) : TelemetryPanel.StateText(car),
                     car.State == CarState.Retired ? "—" : $"{car.Tyre.Letter} {car.Tyre.Condition:0}%",
                     running ? $"{car.Tyre.Temperature:0}" : "—",
                     car.State == CarState.Retired ? "—" : $"{car.Engine.Temperature:0}",
@@ -616,16 +632,72 @@ public partial class MainForm : Form, IRaceObserver, IQualifyingObserver
         }
 
         if (_race == null) return;
-        tslSession.Text = _race.IsFinished ? "Гонка · фініш" : $"Гонка · коло {_race.CurrentLap}/{_race.TotalLaps}";
-        tsslLap.Text = _race.IsFinished ? "Фініш" : $"Коло {_race.CurrentLap} / {_race.TotalLaps}";
-        tsslLeader.Text = "Лідер: " + _race.Leader.Driver.FullName;
-        tsslPits.Text = "Піт-стопів: " + _race.TotalPitStops;
+        string neutral = _race.SafetyCar switch
+        {
+            SafetyCarMode.SafetyCar => " · сейфті-кар",
+            SafetyCarMode.Virtual => " · VSC",
+            _ => string.Empty
+        };
+        tslSession.Text = _race.StartPhase switch
+        {
+            RaceStartPhase.FormationLap => _race.SessionSeconds > 0 ? "Прогрівальне коло" : "Стартова решітка",
+            RaceStartPhase.StartLights => "Стартова процедура",
+            _ => _race.IsFinished ? "Гонка · фініш" : $"Гонка · коло {_race.CurrentLap}/{_race.TotalLaps}{neutral}"
+        };
+        tsslLap.Text = _race.StartPhase switch
+        {
+            RaceStartPhase.FormationLap => _race.SessionSeconds > 0 ? $"Прогрівальне коло {_race.FormationLapProgress:P0}" : "На решітці",
+            RaceStartPhase.StartLights => $"Вогні: {_race.StartLightsOn} / {Race.StartLightCount}",
+            _ => _race.IsFinished ? "Фініш" : $"Коло {_race.CurrentLap} / {_race.TotalLaps}"
+        };
+        tsslLeader.Text = (_race.IsRacing ? "Лідер: " : "Поул: ") + _race.Leader.Driver.FullName;
+        tsslPits.Text = $"Піт-стопів: {_race.TotalPitStops} · обгонів: {_race.TotalOvertakes}";
 
-        TimeSpan time = TimeSpan.FromSeconds(_race.ElapsedSeconds);
         string state = _race.IsCompleted ? "Усі в парк-ферме"
             : _race.IsFinished ? "Коло охолодження"
             : _running ? "Симуляція триває" : "Пауза";
-        tsslState.Text = $"{state} · час гонки {(int)time.TotalHours}:{time.Minutes:00}:{time.Seconds:00}";
+        if (_race.IsRacing)
+        {
+            TimeSpan time = TimeSpan.FromSeconds(_race.ElapsedSeconds);
+            tsslState.Text = $"{state} · час гонки {(int)time.TotalHours}:{time.Minutes:00}:{time.Seconds:00}";
+        }
+        else
+        {
+            TimeSpan time = TimeSpan.FromSeconds(_race.PreRaceSeconds);
+            tsslState.Text = $"{state} · до старту гонки {(int)time.TotalMinutes}:{time.Seconds:00}";
+        }
+    }
+
+    /// <summary>
+    /// Табло стартових вогнів над схемою: темне на решітці й під час прогрівального кола,
+    /// вогні загоряються по одному, а після старту табло гасне і за пару секунд зникає.
+    /// </summary>
+    private void UpdateStartLights()
+    {
+        StartLightsView? view = null;
+        if (_phase == WeekendPhase.Race && _race is { IsStarted: true } race)
+        {
+            if (race.StartPhase == RaceStartPhase.FormationLap)
+            {
+                view = new StartLightsView(0, race.SessionSeconds > 0
+                    ? $"Прогрівальне коло · {race.FormationLapProgress:P0}"
+                    : "Боліди на решітці · натисніть «Старт гонки»");
+            }
+            else if (race.StartPhase == RaceStartPhase.StartLights)
+            {
+                view = new StartLightsView(race.StartLightsOn, race.StartLightsOn == 0 ? "Усі на своїх місцях" : "Увага…");
+            }
+            else if (_lightsOutAt is { } at)
+            {
+                double since = (DateTime.UtcNow - at).TotalSeconds;
+                double visible = LightsOutShowSeconds + LightsFadeSeconds;
+                if (since < visible)
+                    view = new StartLightsView(0, "Вогні згасли — гонка!", (float)Math.Min(1, (visible - since) / LightsFadeSeconds));
+                else
+                    _lightsOutAt = null;
+            }
+        }
+        trackPanel.StartLights = view;
     }
 
     private void AppendLog(string line)

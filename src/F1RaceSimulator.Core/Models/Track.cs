@@ -38,6 +38,12 @@ public sealed class Track
     /// <summary>Коефіцієнт абразивності: 1.0 — середній знос, більше — гума зношується швидше.</summary>
     public double TyreWearFactor { get; init; } = 1.0;
 
+    /// <summary>
+    /// Наскільки легко тут обганяти, від 0 до 1: Монако ≈ 0.05 (обгонів майже немає),
+    /// Монца чи Лас-Вегас ≈ 0.85 (довгі прямі й важкі гальмування).
+    /// </summary>
+    public double Overtaking { get; init; } = 0.5;
+
     /// <summary>Час проїзду піт-лейну без урахування зупинки, секунди.</summary>
     public double PitLaneSeconds { get; init; } = 22;
 

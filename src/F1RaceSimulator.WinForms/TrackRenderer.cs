@@ -147,6 +147,123 @@ public sealed class TrackRenderer
                 g.DrawString(text, font, labelBrush, textPoint);
             }
         }
+
+        // 8. Сейфті-кар на трасі і табличка нейтралізації.
+        if (session is Race race)
+            DrawSafetyCar(g, bounds, race, path, Map, radius);
+    }
+
+    /// <summary>Машина безпеки трохи попереду лідера і жовта табличка «СЕЙФТІ-КАР» / «VSC».</summary>
+    private static void DrawSafetyCar(Graphics g, Rectangle bounds, Race race, Polyline path, Func<Vec2, PointF> map, float radius)
+    {
+        if (race.SafetyCar == SafetyCarMode.None) return;
+        Color yellow = Color.FromArgb(255, 200, 0);
+        using var black = new SolidBrush(Color.FromArgb(20, 20, 20));
+        using var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+
+        if (race.SafetyCarFraction is { } fraction)
+        {
+            PointF p = map(path.PointAt(fraction));
+            float w = radius * 4.2f, h = radius * 2.6f;
+            var rect = new RectangleF(p.X - w / 2, p.Y - h / 2, w, h);
+            using (var fill = new SolidBrush(yellow))
+            using (var shape = RoundedRect(rect, h / 2.5f))
+            {
+                g.FillPath(fill, shape);
+                using var border = new Pen(Color.FromArgb(20, 20, 20), 1f);
+                g.DrawPath(border, shape);
+            }
+            using var tiny = new Font("Segoe UI", Math.Max(6.5f, h * 0.48f), FontStyle.Bold, GraphicsUnit.Pixel);
+            g.DrawString("SC", tiny, black, rect, format);
+        }
+
+        string text = race.SafetyCar == SafetyCarMode.SafetyCar ? "СЕЙФТІ-КАР" : "ВІРТУАЛЬНИЙ СЕЙФТІ-КАР";
+        using var font = new Font("Segoe UI", 10f, FontStyle.Bold, GraphicsUnit.Point);
+        SizeF size = g.MeasureString(text, font);
+        var banner = new RectangleF(bounds.Left + 10, bounds.Top + 10, size.Width + 22, size.Height + 8);
+        using (var fill = new SolidBrush(yellow))
+        using (var shape = RoundedRect(banner, 5))
+            g.FillPath(fill, shape);
+        g.DrawString(text, font, black, banner, format);
+    }
+
+    /// <summary>
+    /// Табло стартових вогнів: п'ять колонок по два червоні вогні. Вогні загоряються по одному,
+    /// а коли гаснуть усі — стартує гонка, і табло плавно зникає.
+    /// </summary>
+    public static void DrawStartLights(Graphics g, Rectangle bounds, StartLightsView view)
+    {
+        ArgumentNullException.ThrowIfNull(g);
+        ArgumentNullException.ThrowIfNull(view);
+        float alpha = Math.Clamp(view.Opacity, 0f, 1f);
+        if (alpha <= 0) return;
+        Color A(Color c, float k = 1f) => Color.FromArgb((int)(c.A * alpha * k), c);
+
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        float lamp = Math.Clamp(bounds.Width / 30f, 14f, 26f);
+        float gap = lamp * 0.45f, pad = lamp * 0.45f;
+        float columnWidth = lamp + pad;
+        float width = Race.StartLightCount * columnWidth + (Race.StartLightCount - 1) * gap + pad * 2;
+        float height = lamp * 2 + pad * 4;
+        var housing = new RectangleF(bounds.Left + (bounds.Width - width) / 2, bounds.Top + 12, width, height);
+
+        // Корпус табло.
+        using (var fill = new SolidBrush(A(Color.FromArgb(235, 18, 18, 22))))
+        using (var shape = RoundedRect(housing, lamp * 0.35f))
+            g.FillPath(fill, shape);
+
+        for (int i = 0; i < Race.StartLightCount; i++)
+        {
+            float x = housing.Left + pad + i * (columnWidth + gap);
+            var column = new RectangleF(x, housing.Top + pad, columnWidth, height - pad * 2);
+            using (var fill = new SolidBrush(A(Color.FromArgb(255, 38, 38, 44))))
+            using (var shape = RoundedRect(column, lamp * 0.25f))
+                g.FillPath(fill, shape);
+
+            bool lit = i < view.LitCount;
+            for (int row = 0; row < 2; row++)
+            {
+                float cx = column.Left + column.Width / 2;
+                float cy = column.Top + pad * 0.75f + lamp / 2 + row * (lamp + pad * 0.5f);
+                if (lit)
+                {
+                    using var glow = new SolidBrush(A(Color.FromArgb(90, 255, 40, 30)));
+                    float r = lamp * 0.78f;
+                    g.FillEllipse(glow, cx - r, cy - r, r * 2, r * 2);
+                }
+                using var bulb = new SolidBrush(A(lit ? Color.FromArgb(255, 255, 36, 24) : Color.FromArgb(255, 70, 22, 22)));
+                g.FillEllipse(bulb, cx - lamp / 2, cy - lamp / 2, lamp, lamp);
+                if (lit)
+                {
+                    using var shine = new SolidBrush(A(Color.FromArgb(150, 255, 210, 200)));
+                    g.FillEllipse(shine, cx - lamp * 0.22f, cy - lamp * 0.3f, lamp * 0.26f, lamp * 0.2f);
+                }
+            }
+        }
+
+        // Підпис під табло.
+        using var font = new Font("Segoe UI", 9.5f, FontStyle.Bold, GraphicsUnit.Point);
+        SizeF size = g.MeasureString(view.Caption, font);
+        var pill = new RectangleF(housing.Left + (housing.Width - size.Width - 18) / 2, housing.Bottom + 6, size.Width + 18, size.Height + 4);
+        using (var fill = new SolidBrush(A(Color.FromArgb(225, 18, 18, 22))))
+        using (var shape = RoundedRect(pill, pill.Height / 2))
+            g.FillPath(fill, shape);
+        using var textBrush = new SolidBrush(A(Color.White));
+        using var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+        g.DrawString(view.Caption, font, textBrush, pill, format);
+    }
+
+    /// <summary>Прямокутник із заокругленими кутами.</summary>
+    private static GraphicsPath RoundedRect(RectangleF r, float radius)
+    {
+        float d = Math.Max(0.1f, Math.Min(radius * 2, Math.Min(r.Width, r.Height)));
+        var path = new GraphicsPath();
+        path.AddArc(r.Left, r.Top, d, d, 180, 90);
+        path.AddArc(r.Right - d, r.Top, d, d, 270, 90);
+        path.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+        path.AddArc(r.Left, r.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 
     /// <summary>Команди всіх учасників сесії (бокси видно, навіть коли боліди в гаражі).</summary>

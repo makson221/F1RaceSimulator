@@ -9,10 +9,16 @@ namespace F1RaceSimulator.Core.Simulation;
 /// Гонка — центральний клас симуляції.
 /// Рухає боліди за профілем швидкості траси, вирішує піт-стопи через стратегії пілотів,
 /// веде хронометраж, визначає позиції та повідомляє спостерігачів про події (патерн Observer).
-/// Після клетчастого прапора боліди проїжджають коло охолодження і заїжджають у парк-ферме.
+/// Перед гонкою боліди проїжджають прогрівальне коло і стартують за вогнями,
+/// після клетчастого прапора — коло охолодження і парк-ферме.
 /// Клас нічого не знає про інтерфейс програми.
+/// <para>
+/// Клас розділено на кілька файлів (partial): <c>Race.cs</c> — рух і хронометраж,
+/// <c>Race.Start.cs</c> — прогрівальне коло і вогні, <c>Race.Overtaking.cs</c> — обгони
+/// та інциденти, <c>Race.SafetyCar.cs</c> — сейфті-кар.
+/// </para>
 /// </summary>
-public sealed class Race : ITrackSession
+public sealed partial class Race : ITrackSession
 {
     /// <summary>Імовірність технічного сходу за одне коло для одного боліда.</summary>
     public const double DefaultRetirementChancePerLap = 0.0005;
@@ -36,14 +42,18 @@ public sealed class Race : ITrackSession
     public const double CoolDownPace = 0.6;
 
     /// <summary>Частка звичайної витрати палива на колі охолодження (малі оберти).</summary>
-    public const double CoolDownFuelFactor = 0.3;
+    public const double CoolDownFuelFactor = FuelTank.EasyLapFactor;
 
+    /// <summary>Імовірність повільного піт-стопу (заїло гайку колеса, затримка з домкратом).</summary>
+    public const double SlowStopChance = 0.07;
+
+    /// <summary>Технічні причини сходу (аварії й зіткнення моделюються окремо).</summary>
     private static readonly string[] RetirementReasons =
     {
         "відмова силової установки",
         "проблема з коробкою передач",
         "гідравліка",
-        "аварія",
+        "електроніка",
         "пошкодження підвіски",
         "перегрів гальм"
     };
@@ -54,6 +64,13 @@ public sealed class Race : ITrackSession
     private readonly Dictionary<Car, PaceNoise> _noise = new();
     private readonly Dictionary<(string, string), double> _lastOvertake = new();
     private readonly Dictionary<(string Code, string Kind), double> _warningTimes = new();
+
+    /// <summary>Темп кожного боліда на поточному кроці без турбулентного повітря (для рішень про обгін).</summary>
+    private readonly Dictionary<Car, double> _cleanLapTime = new();
+
+    /// <summary>Скільки кола проїхав кожен болід за поточний крок.</summary>
+    private readonly Dictionary<Car, double> _stepDelta = new();
+
     private List<Car> _standings;
     private int _leaderLapsAnnounced;
     private bool _parkedAnnounced;
@@ -64,7 +81,10 @@ public sealed class Race : ITrackSession
     /// <param name="track">Траса гонки.</param>
     /// <param name="grid">Боліди в порядку стартової решітки (перший — на поулі).</param>
     /// <param name="random">Джерело випадковості.</param>
-    /// <param name="retirementChancePerLap">Імовірність сходу за коло (0 — без сходів).</param>
+    /// <param name="retirementChancePerLap">
+    /// Імовірність технічного сходу за коло. 0 — без сходів і без аварій (для тестів);
+    /// від цього значення пропорційно залежить і частота інцидентів на трасі.
+    /// </param>
     public Race(Track track, IEnumerable<Car> grid, IRandomSource random,
         double retirementChancePerLap = DefaultRetirementChancePerLap)
     {
@@ -82,6 +102,8 @@ public sealed class Race : ITrackSession
 
         RetirementChancePerLap = retirementChancePerLap;
         _standings = _cars.ToList();
+        OvertakingZones = OvertakingZone.Detect(track.Profile);
+        _startZoneEnd = StartZoneEnd(OvertakingZones);
     }
 
     public Track Track { get; }
@@ -94,9 +116,13 @@ public sealed class Race : ITrackSession
 
     public double RetirementChancePerLap { get; }
 
-    /// <summary>Час від старту, секунди.</summary>
+    /// <summary>Час гонки від згасання стартових вогнів, секунди (до старту — 0).</summary>
     public double ElapsedSeconds { get; private set; }
 
+    /// <summary>Повний час сесії: прогрівальне коло, стартова процедура і гонка, секунди.</summary>
+    public double SessionSeconds => PreRaceSeconds + ElapsedSeconds;
+
+    /// <summary>Викликано <see cref="Start"/>: боліди на решітці або вже їдуть.</summary>
     public bool IsStarted { get; private set; }
 
     /// <summary>Лідер отримав клетчастий прапор.</summary>
@@ -127,6 +153,12 @@ public sealed class Race : ITrackSession
     /// <summary>Загальна кількість піт-стопів у гонці.</summary>
     public int TotalPitStops => _cars.Sum(c => c.PitStops);
 
+    /// <summary>Скільки обгонів на трасі було в гонці (без змін позицій через піт-стопи).</summary>
+    public int TotalOvertakes { get; private set; }
+
+    /// <summary>Зони обгону цієї траси — точки гальмування після прямих.</summary>
+    public IReadOnlyList<OvertakingZone> OvertakingZones { get; }
+
     /// <summary>Підписати спостерігача на події гонки.</summary>
     public void Subscribe(IRaceObserver observer)
     {
@@ -138,39 +170,9 @@ public sealed class Race : ITrackSession
     /// <summary>Відписати спостерігача.</summary>
     public void Unsubscribe(IRaceObserver observer) => _observers.Remove(observer);
 
-    /// <summary>Розставляє боліди на решітці та дає старт гонці.</summary>
-    public void Start()
-    {
-        if (IsStarted)
-            throw new InvalidOperationException("Гонку вже розпочато.");
-
-        for (int i = 0; i < _cars.Count; i++)
-        {
-            var car = _cars[i];
-            // Кожна наступна позиція на решітці приблизно на 8 метрів позаду.
-            car.PlaceOnGrid(i + 1, -0.0005 - 0.0015 * i);
-
-            // Паливо на всю дистанцію; двигун уже пройшов кілька етапів сезону (знос 5–40 %).
-            car.PrepareForRace(Track, engineWear: 5 + _random.NextDouble() * 35);
-
-            car.Timing.Start(0);
-            car.Telemetry = CarTelemetry.Stopped;
-
-            double period = 60 + _random.NextDouble() * 90;             // 60–150 секунд
-            _noise[car] = new PaceNoise(
-                Phase: _random.NextDouble() * 2 * Math.PI,
-                Omega: 2 * Math.PI / period,
-                Amplitude: 0.0015 + (1 - car.Driver.Consistency) * 0.015);
-        }
-
-        IsStarted = true;
-        Notify(RaceEventType.RaceStarted,
-            $"Старт! {Track.GrandPrix}, {UkrainianText.Laps(TotalLaps)}. На поулі — {_cars[0].Driver.FullName}.",
-            _cars[0]);
-    }
-
     /// <summary>
-    /// Просуває симуляцію на <paramref name="seconds"/> секунд гоночного часу.
+    /// Просуває симуляцію на <paramref name="seconds"/> секунд. Коли боліди після прогрівального
+    /// кола стали на решітку, крок зупиняється: стартові вогні інтерфейс показує в реальному часі.
     /// </summary>
     public void Step(double seconds)
     {
@@ -180,15 +182,35 @@ public sealed class Race : ITrackSession
 
         while (seconds > 1e-9 && !IsCompleted)
         {
-            double dt = Math.Min(MaxStepSeconds, seconds);
-            StepInternal(dt);
+            RaceStartPhase phase = StartPhase;
+            double limit = phase switch
+            {
+                RaceStartPhase.FormationLap => FormationStepSeconds,
+                RaceStartPhase.StartLights => LightsStepSeconds,
+                _ => MaxStepSeconds
+            };
+            double dt = Math.Min(limit, seconds);
+            switch (phase)
+            {
+                case RaceStartPhase.FormationLap:
+                    StepFormationLap(dt);
+                    break;
+                case RaceStartPhase.StartLights:
+                    StepStartLights(dt);
+                    break;
+                default:
+                    StepInternal(dt);
+                    break;
+            }
             seconds -= dt;
+            if (phase == RaceStartPhase.FormationLap && StartPhase == RaceStartPhase.StartLights)
+                break;
         }
     }
 
     /// <summary>
     /// Проводить гонку до остаточного протоколу — коли всі фінішували або зійшли
-    /// (для тестів і швидкого розрахунку).
+    /// (для тестів і швидкого розрахунку). Якщо гонку не розпочато, спершу прогрівальне коло.
     /// </summary>
     /// <exception cref="InvalidOperationException">Якщо гонка не завершилась за розумний час.</exception>
     public void RunToFinish()
@@ -215,25 +237,34 @@ public sealed class Race : ITrackSession
     private void StepInternal(double dt)
     {
         ElapsedSeconds += dt;
+        _stepDelta.Clear();
+        UpdateVirtualSafetyCar();
 
-        // Відставання від суперника попереду і відрив від суперника позаду (для режимів атаки й захисту).
-        var gapAhead = new Dictionary<Car, double>();
-        var gapBehind = new Dictionary<Car, double>();
-        for (int i = 0; i < _standings.Count; i++)
+        // Боліди рухаються в порядку класифікації: суперник попереду вже зробив свій крок,
+        // тому відомо, де він зараз, — і болід позаду не може «проїхати крізь» нього.
+        List<Car> order = _standings.ToList();
+        Car? leaderOnTrack = order.FirstOrDefault(c => c.State == CarState.OnTrack);
+        var inPitsBefore = order.Where(c => c.IsInPits).ToHashSet();
+
+        // Відставання від суперника попереду і відрив від суперника позаду на початок кроку
+        // (для турбулентного повітря і режимів атаки й захисту).
+        var gapAhead = new double[order.Count];
+        var gapBehind = new double[order.Count];
+        for (int i = 0; i < order.Count; i++)
         {
-            Car car = _standings[i];
-            gapAhead[car] = GapToCar(_standings, i - 1, car);
-            gapBehind[car] = i + 1 < _standings.Count && _standings[i + 1].State == CarState.OnTrack
-                ? TimeGap(_standings[i + 1].RaceDistance, car.RaceDistance)
+            gapAhead[i] = GapToCar(order, i - 1, order[i]);
+            gapBehind[i] = i + 1 < order.Count && order[i + 1].State == CarState.OnTrack
+                ? TimeGap(order[i + 1].RaceDistance, order[i].RaceDistance)
                 : double.PositiveInfinity;
         }
 
-        foreach (var car in _cars)
+        for (int i = 0; i < order.Count; i++)
         {
+            Car car = order[i];
             switch (car.State)
             {
                 case CarState.OnTrack:
-                    UpdateOnTrack(car, dt, gapAhead[car], gapBehind[car]);
+                    UpdateOnTrack(car, dt, gapAhead[i], gapBehind[i], CarAheadOnTrack(order, i), car == leaderOnTrack);
                     break;
                 case CarState.InPitLane:
                     UpdateInPitLane(car, dt);
@@ -247,7 +278,7 @@ public sealed class Race : ITrackSession
             }
         }
 
-        UpdateStandings();
+        UpdateStandings(inPitsBefore);
 
         if (!IsFinished && _cars.All(c => !c.IsRunning))
         {
@@ -265,6 +296,23 @@ public sealed class Race : ITrackSession
                 "Усі боліди в парк-ферме. Подіум: " + string.Join(", ", podium.Select((c, i) => $"{i + 1}. {c.Driver.LastName}")) + ".",
                 podium.FirstOrDefault());
         }
+    }
+
+    /// <summary>
+    /// Суперник, з яким болід бореться за позицію: найближчий попереду в класифікації,
+    /// хто зараз на трасі (не в піт-лейні). Боліди, що відстають на коло, сюди не потрапляють:
+    /// за синіх прапорів вони пропускають лідерів.
+    /// </summary>
+    private static Car? CarAheadOnTrack(List<Car> order, int index)
+    {
+        Car car = order[index];
+        for (int j = index - 1; j >= 0; j--)
+        {
+            Car other = order[j];
+            if (other.State != CarState.OnTrack) continue;
+            return other.Distance - car.Distance < 0.5 ? other : null;
+        }
+        return null;
     }
 
     /// <summary>
@@ -322,40 +370,85 @@ public sealed class Race : ITrackSession
         return d * Track.TypicalLapSeconds / rel;
     }
 
+    /// <summary>Скільки кола болід проїжджає за <paramref name="seconds"/> секунд у цьому місці траси.</summary>
+    private double SecondsToLaps(double seconds, double fraction, double lapTime) =>
+        seconds * Math.Max(0.2, Track.Profile.RelativeSpeedAt(fraction)) / lapTime;
+
     /// <summary>Відставання боліда від суперника з індексом <paramref name="aheadIndex"/>, секунди.</summary>
     private double GapToCar(List<Car> standings, int aheadIndex, Car car) =>
         aheadIndex < 0 || standings[aheadIndex].State != CarState.OnTrack
             ? double.PositiveInfinity
             : TimeGap(car.RaceDistance, standings[aheadIndex].RaceDistance);
 
-    private void UpdateOnTrack(Car car, double dt, double gapAheadSeconds, double gapBehindSeconds)
+    private void UpdateOnTrack(Car car, double dt, double gapAheadSeconds, double gapBehindSeconds, Car? rival, bool leadsOnTrack)
     {
-        ChooseDrivingMode(car, gapAheadSeconds, gapBehindSeconds);
+        bool neutralized = SafetyCar != SafetyCarMode.None;
+        if (neutralized)
+        {
+            // Під сейфті-каром боротьби немає: рівний темп, без ERS і турбулентного повітря.
+            car.InDirtyAir = false;
+            car.Mode = DrivingMode.Normal;
+        }
+        else
+        {
+            ChooseDrivingMode(car, gapAheadSeconds, gapBehindSeconds, WorthAttacking(car, rival, gapAheadSeconds));
+        }
 
-        // Темп: пілот і болід, шини (знос і температура), двигун, ERS, режим їзди,
-        // турбулентне повітря і плавне коливання форми.
+        // Темп: пілот і болід, шини (знос і температура), двигун, ERS, режим їзди
+        // і плавне коливання форми. Окремо — втрата в турбулентному повітрі.
         var noise = _noise[car];
         double pace = car.BasePace
                       * car.Tyre.PaceMultiplier
                       * car.Engine.PaceFactor
                       * car.Battery.PaceFactor
                       * car.ModePaceFactor
-                      * (car.InDirtyAir ? DirtyAirPaceFactor : 1)
                       * (1 + noise.Amplitude * Math.Sin(ElapsedSeconds * noise.Omega + noise.Phase));
-        double lapTime = Track.TypicalLapSeconds / pace + car.Fuel.LapTimePenaltySeconds;
+        double cleanLapTime = Track.TypicalLapSeconds / pace + car.Fuel.LapTimePenaltySeconds;
+        _cleanLapTime[car] = cleanLapTime;
+        double lapTime = car.InDirtyAir
+            ? Track.TypicalLapSeconds / (pace * DirtyAirPaceFactor) + car.Fuel.LapTimePenaltySeconds
+            : cleanLapTime;
+
+        // Нейтралізація: обмеження темпу і з ким тримати дистанцію.
+        Car? target = rival;
+        double followSeconds = MinFollowSeconds;
+        if (SafetyCar == SafetyCarMode.SafetyCar)
+        {
+            target = leadsOnTrack ? null : PhysicallyAhead(car);
+            lapTime = SafetyCarLapTime(car, lapTime, target);
+            followSeconds = SafetyCarGapSeconds;
+        }
+        else if (SafetyCar == SafetyCarMode.Virtual)
+        {
+            lapTime = Math.Max(lapTime, Track.TypicalLapSeconds * VscLapFactor);
+        }
 
         // Швидкість за профілем траси: на прямих — вища за середню, у поворотах — нижча.
         // Береться в середині кроку (метод середньої точки), щоб рух був точнішим.
         double fraction = Polyline.Wrap(car.Distance);
-        double launch = LaunchFactor(fraction, dt, lapTime);
+        double launch = LaunchFactor(car, fraction, dt, lapTime);
         double rel = Track.Profile.RelativeSpeedAt(fraction);
         double lapsDelta = dt * rel * launch / lapTime;
         rel = Track.Profile.RelativeSpeedAt(fraction + lapsDelta / 2);
         lapsDelta = dt * rel * launch / lapTime;
 
+        // Обгін: маневр, що вже триває, і нова спроба в зоні гальмування.
+        lapsDelta += ContinuePass(car, dt, launch);
         double before = car.Distance;
-        car.Advance(lapsDelta, Track.TyreWearFactor);
-        car.UpdateSystems(new ComponentContext(dt, lapsDelta, Track.AirTemperature, car.Push, car.InDirtyAir, IsRacing: true));
+        if (target != null && !neutralized && CanAttack(car))
+            TryOvertake(car, target, before, before + lapsDelta);
+        if (car.State != CarState.OnTrack) return;       // зіткнення під час спроби обгону
+
+        // Не можна проїхати крізь суперника: якщо обгін не вдався, болід їде слідом за ним.
+        if (target != null && !IsPassing(car, target) && !IsFreeStart(car) && !IsRecovering(target))
+            lapsDelta = LimitByCarAhead(car, target, lapsDelta, followSeconds, fraction, lapTime);
+
+        // Під сейфті-каром шини й двигун майже відпочивають, палива йде менше.
+        double load = neutralized ? 0.6 : 1;
+        car.Advance(lapsDelta, Track.TyreWearFactor * (neutralized ? 0.35 : 1));
+        _stepDelta[car] = lapsDelta;
+        car.UpdateSystems(new ComponentContext(dt, lapsDelta * load, Track.AirTemperature,
+            neutralized ? 0.15 : car.Push, car.InDirtyAir, IsRacing: true));
         UpdateTelemetry(car, lapTime, launch);
         HandleSectors(car, before, car.Distance, dt);
 
@@ -367,6 +460,7 @@ public sealed class Race : ITrackSession
         {
             car.Retire("закінчилося паливо");
             Notify(RaceEventType.Retirement, $"{car.Driver.FullName} — сход (закінчилося паливо).", car);
+            DeployVirtualSafetyCar($"болід {car.Driver.LastName} зупинився на трасі");
             return;
         }
 
@@ -380,32 +474,46 @@ public sealed class Race : ITrackSession
                 : RetirementReasons[(int)(_random.NextDouble() * RetirementReasons.Length) % RetirementReasons.Length];
             car.Retire(reason);
             Notify(RaceEventType.Retirement, $"{car.Driver.FullName} — сход ({reason}).", car);
+            if (_random.NextDouble() < 0.35)                      // болід зупинився в небезпечному місці
+                DeployVirtualSafetyCar($"болід {car.Driver.LastName} зупинився на трасі");
             return;
         }
 
-        // В'їзд у піт-лейн: стратегія пілота вирішує, чи заїжджати.
+        // Помилка пілота без суперника поруч: розворот або аварія.
+        if (!neutralized && CheckSoloIncident(car, lapsDelta)) return;
+
+        // В'їзд у піт-лейн: стратегія пілота вирішує, чи заїжджати. Під сейфті-каром
+        // піт-стоп коштує вдвічі менше часу, тому команди охоче цим користуються.
         if (!IsChequeredFlag && car.Distance > 0.5 && Crossed(before, car.Distance, Track.Layout.PitEntry))
         {
             int lapsRemaining = TotalLaps - car.CompletedLaps;
-            if (car.Strategy.ShouldPit(car, lapsRemaining, Track))
+            bool cheapStop = IsCheapStop(car, lapsRemaining);
+            if (cheapStop || car.Strategy.ShouldPit(car, lapsRemaining, Track))
             {
                 car.EnterPitLane(Track.Layout.PitSpan, BoxPositionFor(car.Team));
-                Notify(RaceEventType.PitEntry,
-                    $"{car.Driver.FullName} заїжджає на піт-стоп (шини {car.Tyre.Condition:0}%).", car);
+                _passes.Remove(car);
+                if (neutralized) _neutralizedStops.Add(car);
+                Notify(RaceEventType.PitEntry, cheapStop
+                    ? $"{car.Driver.FullName} користується нейтралізацією і заїжджає на піт-стоп (шини {car.Tyre.Condition:0}%)."
+                    : $"{car.Driver.FullName} заїжджає на піт-стоп (шини {car.Tyre.Condition:0}%).", car);
             }
         }
     }
 
     /// <summary>
-    /// Старт з місця: перші секунди болід розганяється (швидкість не більша за a·t),
-    /// тому перше коло повільніше за наступні. Повертає множник швидкості (0..1).
+    /// Обмежує крок так, щоб болід не наздогнав суперника ближче, ніж на
+    /// <paramref name="followSeconds"/>. Якщо болід уже надто близько, він їде трохи
+    /// повільніше за суперника і поступово відпускає його на безпечну дистанцію.
     /// </summary>
-    private double LaunchFactor(double fraction, double dt, double lapTime)
+    private double LimitByCarAhead(Car car, Car target, double lapsDelta, double followSeconds, double fraction, double lapTime)
     {
-        double t = ElapsedSeconds - dt / 2;
-        double limit = LaunchAccelerationKmhPerSecond * t;
-        double speed = Track.Profile.IsEmpty ? 220 : Track.Profile.SampleAt(fraction, lapTime).Speed;
-        return speed <= 0 || limit >= speed ? 1 : Math.Max(0.02, limit / speed);
+        double gap = Polyline.Wrap(target.Distance - car.Distance);
+        if (gap > 0.5) return lapsDelta;                                   // насправді суперник позаду
+        double allowed = gap - SecondsToLaps(followSeconds, fraction, lapTime);
+        if (lapsDelta <= allowed) return lapsDelta;
+        if (allowed >= 0) return allowed;
+        double follow = _stepDelta.TryGetValue(target, out double aheadDelta) ? aheadDelta : lapsDelta;
+        return Math.Max(0, Math.Min(lapsDelta, follow * 0.97));
     }
 
     /// <summary>Телеметрія з профілю траси під темп боліда.</summary>
@@ -413,14 +521,14 @@ public sealed class Race : ITrackSession
     {
         if (Track.Profile.IsEmpty)
         {
-            car.Telemetry = new CarTelemetry(220 * launch, 6, 10500, 100, false);
+            car.Telemetry = new CarTelemetry(220 * launch * Track.TypicalLapSeconds / lapTime, 6, 10500, 100, false);
             return;
         }
         var s = Track.Profile.SampleAt(Polyline.Wrap(car.Distance), lapTime);
         int throttle = s.Throttle;
         if (car.Mode == DrivingMode.Saving && !s.Brake && throttle > 90) throttle = 85;   // lift and coast
         car.Telemetry = launch < 1
-            ? new CarTelemetry(s.Speed * launch, Math.Clamp((int)(s.Gear * launch) + 1, 1, 8), 11000, 100, false)
+            ? new CarTelemetry(s.Speed * launch, Math.Clamp((int)(s.Gear * launch) + 1, 1, 8), launch <= 0 ? 4000 : 11000, launch <= 0 ? 0 : 100, false)
             : new CarTelemetry(s.Speed, s.Gear, s.Rpm, throttle, s.Brake);
     }
 
@@ -446,11 +554,12 @@ public sealed class Race : ITrackSession
     /// <summary>
     /// Обирає режим їзди. Економія — якщо перегріваються шини чи двигун або не вистачає палива
     /// (з гістерезисом: щоб вийти з економії, показники мають повернутися в норму із запасом).
-    /// Атака — якщо суперник попереду ближче ніж за секунду; захист — якщо суперник позаду
-    /// ближче ніж за секунду (обидва — з другого кола). Інакше — рівний темп.
+    /// Атака — якщо суперник попереду ближче ніж за секунду і є сенс атакувати; захист — якщо
+    /// суперник позаду ближче ніж за секунду, а попереду вільно (обидва — з другого кола).
+    /// Пілот, що застряг у «поїзді» без шансів обігнати, їде рівним темпом і береже шини.
     /// Перехід в економію записується в журнал.
     /// </summary>
-    private void ChooseDrivingMode(Car car, double gapAheadSeconds, double gapBehindSeconds)
+    private void ChooseDrivingMode(Car car, double gapAheadSeconds, double gapBehindSeconds, bool worthAttacking)
     {
         bool saving = car.Mode == DrivingMode.Saving;
         double lapsToGo = Math.Max(0, TotalLaps - car.Distance);
@@ -468,7 +577,7 @@ public sealed class Race : ITrackSession
         car.InDirtyAir = gapAheadSeconds < DirtyAirGapSeconds;
         bool racing = car.Distance >= 1;
         DrivingMode mode = fuelShort || tyresHot || engineHot ? DrivingMode.Saving
-            : racing && car.InDirtyAir ? DrivingMode.Attack
+            : racing && car.InDirtyAir ? (worthAttacking ? DrivingMode.Attack : DrivingMode.Normal)
             : racing && gapBehindSeconds < DirtyAirGapSeconds ? DrivingMode.Defend
             : DrivingMode.Normal;
 
@@ -506,7 +615,9 @@ public sealed class Race : ITrackSession
         bool reachedBox = car.MoveInPitLane(dt / Track.PitLaneSeconds);
         if (reachedBox)
         {
-            double stopSeconds = 2.0 + _random.NextDouble() * 1.5;   // робота механіків 2.0–3.5 с
+            // Зазвичай механіки працюють 2.0–3.3 с, але іноді заїдає гайку колеса чи домкрат.
+            bool slow = _random.NextDouble() < SlowStopChance;
+            double stopSeconds = slow ? 4.5 + _random.NextDouble() * 5.5 : 2.0 + _random.NextDouble() * 1.3;
             car.BeginStop(stopSeconds);
         }
 
@@ -525,8 +636,10 @@ public sealed class Race : ITrackSession
         Tyre oldTyre = car.Tyre;
         car.ChangeTyres(TyreFactory.Create(compound));
 
-        Notify(RaceEventType.PitStop,
-            $"{car.Driver.FullName} — піт-стоп {car.LastStopDuration:0.0} с, {oldTyre.CompoundName} → {car.Tyre.CompoundName}.", car);
+        string text = car.LastStopDuration > 4
+            ? $"{car.Driver.FullName} — повільний піт-стоп {car.LastStopDuration:0.0} с (проблема з колесом), {oldTyre.CompoundName} → {car.Tyre.CompoundName}."
+            : $"{car.Driver.FullName} — піт-стоп {car.LastStopDuration:0.0} с, {oldTyre.CompoundName} → {car.Tyre.CompoundName}.";
+        Notify(RaceEventType.PitStop, text, car);
     }
 
     /// <summary>Перетин лінії старту/фінішу: завершене коло або фініш.</summary>
@@ -548,6 +661,7 @@ public sealed class Race : ITrackSession
         if (lapsDone >= TotalLaps)
         {
             IsChequeredFlag = true;
+            EndNeutralizationAtFlag();
             car.Finish(crossingTime);
             Notify(RaceEventType.LeaderFinished,
                 $"Клетчастий прапор! Перемога — {car.Driver.FullName} ({car.Team.Name}).", car);
@@ -558,6 +672,7 @@ public sealed class Race : ITrackSession
         {
             _leaderLapsAnnounced = lapsDone;
             Notify(RaceEventType.LapCompleted, $"{car.Driver.LastName} лідирує, починається коло {lapsDone + 1}.", car);
+            OnLeaderLap(lapsDone);
         }
     }
 
@@ -576,7 +691,10 @@ public sealed class Race : ITrackSession
         }
     }
 
-    /// <summary>Боліди для схеми траси: на трасі, у піт-лейні, на колі охолодження, у парк-ферме.</summary>
+    /// <summary>
+    /// Боліди для схеми траси: на решітці і прогрівальному колі, на трасі, у піт-лейні,
+    /// на колі охолодження, у парк-ферме.
+    /// </summary>
     public IReadOnlyList<CarPosition> GetCarPositions()
     {
         var list = new List<CarPosition>(_cars.Count);
@@ -584,7 +702,12 @@ public sealed class Race : ITrackSession
         {
             if (car.State == CarState.Retired) continue;
             bool top = car.Position <= 3;
-            if (car.State == CarState.Finished)
+            if (StartPhase != RaceStartPhase.Racing)
+            {
+                double fraction = Polyline.Wrap(car.Distance + _formation.GetValueOrDefault(car, 1));
+                list.Add(new CarPosition(car, fraction, false, top ? car.Driver.Code : null, top));
+            }
+            else if (car.State == CarState.Finished)
             {
                 list.Add(car.PostRace == PostRaceStage.CoolDownLap
                     ? new CarPosition(car, car.CoolDownFraction, false, top ? car.Driver.Code : null, top)
@@ -602,8 +725,11 @@ public sealed class Race : ITrackSession
         return list;
     }
 
-    /// <summary>Сортує боліди за пройденою дистанцією і фіксує обгони.</summary>
-    private void UpdateStandings()
+    /// <summary>
+    /// Сортує боліди за пройденою дистанцією і фіксує обгони. Зміна позицій на виїзді з піт-лейну
+    /// (<paramref name="inPitsBefore"/> — хто на початку кроку був у боксах) обгоном не вважається.
+    /// </summary>
+    private void UpdateStandings(HashSet<Car>? inPitsBefore = null)
     {
         var ordered = _cars
             .OrderBy(c => c.State == CarState.Retired ? 1 : 0)
@@ -615,15 +741,18 @@ public sealed class Race : ITrackSession
         {
             Car a = ordered[i], b = ordered[i + 1];
             bool aWasBehind = a.Position > b.Position;
-            if (aWasBehind && a.State == CarState.OnTrack && b.State == CarState.OnTrack && ElapsedSeconds > 3)
+            bool pitExit = inPitsBefore != null && (inPitsBefore.Contains(a) || inPitsBefore.Contains(b));
+            if (aWasBehind && a.State == CarState.OnTrack && b.State == CarState.OnTrack && !pitExit)
             {
                 var key = string.CompareOrdinal(a.Driver.Code, b.Driver.Code) < 0
                     ? (a.Driver.Code, b.Driver.Code)
                     : (b.Driver.Code, a.Driver.Code);
                 if (!_lastOvertake.TryGetValue(key, out double last) || ElapsedSeconds - last > 30)
                 {
-                    Notify(RaceEventType.Overtake,
-                        $"Обгін: {a.Driver.FullName} виходить на P{i + 1}, позаду — {b.Driver.LastName}.", a, b);
+                    TotalOvertakes++;
+                    Notify(RaceEventType.Overtake, ElapsedSeconds < 30
+                        ? $"Старт: {a.Driver.FullName} обходить {b.Driver.LastName} і виходить на P{i + 1}."
+                        : $"Обгін: {a.Driver.FullName} виходить на P{i + 1}, позаду — {b.Driver.LastName}.", a, b);
                 }
                 _lastOvertake[key] = ElapsedSeconds;
             }
@@ -668,11 +797,12 @@ public sealed class Race : ITrackSession
         return Math.Max(0, (int)Math.Floor(SortKey(Leader) - SortKey(car)));
     }
 
-    /// <summary>Текст відставання для таблиці: «Лідер», «+3.4», «+1 коло», «Сход».</summary>
+    /// <summary>Текст відставання для таблиці: «Лідер», «+3.4», «+1 коло», «Сход», «Решітка».</summary>
     public string GapText(Car car)
     {
         ArgumentNullException.ThrowIfNull(car);
         if (car.State == CarState.Retired) return "Сход";
+        if (StartPhase != RaceStartPhase.Racing) return car.GridPosition == 1 ? "Поул" : "Решітка";
         if (car == Leader) return "Лідер";
         int lapsBehind = LapsBehindLeader(car);
         if (lapsBehind >= 1) return "+" + UkrainianText.Laps(lapsBehind);
@@ -713,7 +843,10 @@ public sealed class Race : ITrackSession
 
     private void Notify(RaceEventType type, string message, Car? car = null, Car? other = null)
     {
-        var raceEvent = new RaceEvent(type, CurrentLapSafe(), ElapsedSeconds, message, car, other);
+        var raceEvent = new RaceEvent(type, CurrentLapSafe(), ElapsedSeconds, message, car, other)
+        {
+            Label = StartPhase == RaceStartPhase.Racing ? null : "Перед стартом"
+        };
         foreach (var observer in _observers.ToList())
             observer.OnRaceEvent(this, raceEvent);
     }

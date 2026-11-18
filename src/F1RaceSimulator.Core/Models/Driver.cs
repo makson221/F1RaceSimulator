@@ -17,7 +17,10 @@ public sealed class Driver
     /// <summary>Ідентифікатор команди (посилання на <see cref="Team.Id"/>).</summary>
     public string TeamId { get; init; } = string.Empty;
 
-    /// <summary>Швидкість пілота: 1.0 — найшвидший, 0.98 — повільніший на кілька десятих.</summary>
+    /// <summary>
+    /// Швидкість пілота: 1.0 — еталонний темп лідерів, 0.98 — повільніше на кілька десятих.
+    /// Найсильніший пілот пелотону може мати трохи більше за 1.0.
+    /// </summary>
     public double Pace { get; init; } = 0.99;
 
     /// <summary>Стабільність від 0 до 1: чим вища, тим менше коливання темпу і ризик сходу.</summary>
@@ -25,6 +28,12 @@ public sealed class Driver
 
     /// <summary>Дбайливість до шин від 0 до 1: чим вища, тим повільніше зношується гума.</summary>
     public double TyreManagement { get; init; } = 0.9;
+
+    /// <summary>
+    /// Майстерність у боротьбі від 0 до 1: як вдало пілот обганяє і захищається,
+    /// наскільки швидко реагує на згасання стартових вогнів і як рідко псує старт.
+    /// </summary>
+    public double Racecraft { get; init; } = 0.9;
 
     /// <summary>Тип стратегії піт-стопів: "threshold" або "aggressive".</summary>
     public string Strategy { get; init; } = "threshold";

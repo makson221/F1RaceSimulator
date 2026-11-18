@@ -1,6 +1,6 @@
 @startuml sequence-weekend
 !include _style.iuml
-title Діаграма послідовності — гоночний вікенд: кваліфікація, гонка, фініш, очки, наступний етап
+title Діаграма послідовності — гоночний вікенд: кваліфікація, прогрівальне коло, вогні, гонка, очки
 autonumber
 
 actor "Користувач" as User
@@ -29,11 +29,30 @@ Form -> Factory : CreateGrid(data, results)
 Factory --> Form : стартова решітка
 Form -> Race : new Race(track, grid, random)\nSubscribe(this), Start()
 
-== Гонка ==
+== Прогрівальне коло і стартові вогні ==
 User -> Form : F5 «Старт гонки»
+loop StartPhase = FormationLap
+  Form -> Race : Step(dt × швидкість)
+  Race -> Car : повільно за порядком решітки,\nшини прогріваються, назад на своє місце
+end
+Race -> Form : OnRaceEvent(StartLights)
+loop StartPhase = StartLights (завжди ×1)
+  Form -> Race : Step(dt)
+  Form -> Form : табло: StartLightsOn = 1…5
+end
+Race -> Form : OnRaceEvent(RaceStarted) — вогні згасли
+Form -> Form : табло гасне і зникає
+
+== Гонка ==
 loop поки не всі в парк-ферме
   Form -> Race : Step(dt × швидкість)
   Race -> Car : Advance(), UpdateSystems(), Telemetry
+  opt суперник попереду ближче 1 с і зона гальмування
+    Race -> Race : TryOvertake() — шанс залежить від траси,\nпереваги в темпі й майстерності; інакше їде слідом
+  end
+  opt аварія
+    Race -> Form : OnRaceEvent(SafetyCar) — колона, без обгонів
+  end
   opt лідер перетнув фініш на останньому колі
     Race -> Car : Finish(time)\n→ PostRace = CoolDownLap
   end

@@ -56,30 +56,51 @@ package "Simulation" {
     InLap
     PitEntry
   }
-  class Race {
+  class Race <<partial>> {
     -_cars : List<Car>
     -_observers : List<IRaceObserver>
     -_random : IRandomSource
     +Standings : IReadOnlyList<Car>
+    +StartPhase : RaceStartPhase
+    +StartLightsOn : int
+    +SafetyCar : SafetyCarMode
+    +OvertakingZones : IReadOnlyList<OvertakingZone>
+    +TotalOvertakes : int
     +IsChequeredFlag : bool
     +IsFinished : bool
     +IsCompleted : bool
     +FastestLap : double?
-    +FastestLapCar : Car?
     +CurrentLap : int
     +Subscribe(observer : IRaceObserver) : void
-    +Start() : void
+    +Start(formationLap = true) : void
     +Step(seconds : double) : void
     +RunToFinish() : void
     +RunToCompletion() : void
     +GapText(car : Car) : string
     +GetResults() : IReadOnlyList<RaceResult>
-    -UpdateOnTrack(car, dt, gapAhead, gapBehind) : void
-    -UpdateTelemetry(car, fraction, lapTime) : void
-    -HandleSectors(car, before, after, dt) : void
-    -UpdatePostRace(car, dt) : void
-    -ChooseDrivingMode(car, gapAhead, gapBehind) : void
+    -StepFormationLap(dt) : void
+    -StepStartLights(dt) : void
+    -UpdateOnTrack(car, dt, gapAhead, gapBehind, rival, leads) : void
+    -TryOvertake(car, target, before, after) : void
+    -LimitByCarAhead(car, target, laps, gap, ...) : double
+    -DeploySafetyCar(reason) : void
+    -ChooseDrivingMode(car, gapAhead, gapBehind, worth) : void
     -Notify(type, message, car, other) : void
+  }
+  enum RaceStartPhase {
+    FormationLap
+    StartLights
+    Racing
+  }
+  enum SafetyCarMode {
+    None
+    Virtual
+    SafetyCar
+  }
+  class OvertakingZone <<record struct>> {
+    +Fraction : double
+    +Strength : double
+    +{static} Detect(profile) : IReadOnlyList<OvertakingZone>
   }
   class LapTimer {
     +LastLap : double?
@@ -123,7 +144,11 @@ package "Simulation" {
     +Label : string?
   }
   enum RaceEventType {
+    FormationLap
+    StartLights
     RaceStarted
+    SafetyCar
+    Incident
     Overtake
     PitStop
     Retirement
@@ -207,6 +232,9 @@ Race --> IRandomSource
 QualifyingSession --> IRandomSource
 Race ..> RaceEvent : <<create>>
 Race ..> RaceResult : <<create>>
+Race --> RaceStartPhase
+Race --> SafetyCarMode
+Race *--> "1..*" OvertakingZone : зони обгону
 Car *--> CarTelemetry
 Car *--> LapTimer
 Car --> PostRaceStage

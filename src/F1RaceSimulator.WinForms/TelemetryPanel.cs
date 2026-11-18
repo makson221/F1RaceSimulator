@@ -149,7 +149,7 @@ public sealed class TelemetryPanel : Control
             DrawLine(g, $"Останнє коло {LapTimer.Format(timing.LastLap)} · найкраще {LapTimer.Format(timing.BestLap)} · {SectorsText(timing.LastSectors)}",
                 Font, left, y, width, lineHeight, TextColor);
             y += lineHeight;
-            DrawLine(g, $"Режим: {ModeText(car)} · піт-стопів: {car.PitStops} · {string.Join(" → ", car.UsedCompounds)} · {car.Strategy}",
+            DrawLine(g, $"Режим: {ModeText(car, Race)} · піт-стопів: {car.PitStops} · {string.Join(" → ", car.UsedCompounds)} · {car.Strategy}",
                 Font, left, y, width, lineHeight, MutedColor);
         }
         else
@@ -248,10 +248,14 @@ public sealed class TelemetryPanel : Control
         _ => car.State.ToString()
     };
 
-    /// <summary>Режим їзди словами.</summary>
-    public static string ModeText(Car car)
+    /// <summary>Режим їзди словами (з урахуванням стартової процедури і сейфті-кара).</summary>
+    public static string ModeText(Car car, Race? race = null)
     {
         if (car.State != CarState.OnTrack) return "—";
+        if (race is { IsRacing: false })
+            return race.StartPhase == RaceStartPhase.FormationLap ? "прогрівальне коло" : "на решітці";
+        if (race?.SafetyCar == SafetyCarMode.SafetyCar) return "за сейфті-каром";
+        if (race?.SafetyCar == SafetyCarMode.Virtual) return "VSC";
         return car.Mode switch
         {
             DrivingMode.Saving => "економія",

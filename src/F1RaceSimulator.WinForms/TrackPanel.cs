@@ -34,6 +34,11 @@ public sealed class TrackPanel : Panel
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Car? SelectedCar { get; set; }
 
+    /// <summary>Стартові вогні поверх схеми (null — не показувати).</summary>
+    [Browsable(false)]
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public StartLightsView? StartLights { get; set; }
+
     /// <summary>Виникає, коли користувач клацнув мишею по боліду.</summary>
     public event EventHandler<CarEventArgs>? CarClicked;
 
@@ -50,6 +55,8 @@ public sealed class TrackPanel : Panel
             return;
         }
         _renderer.Draw(e.Graphics, ClientRectangle, Track, Session, SelectedCar);
+        if (StartLights != null)
+            TrackRenderer.DrawStartLights(e.Graphics, ClientRectangle, StartLights);
     }
 
     protected override void OnMouseClick(MouseEventArgs e)

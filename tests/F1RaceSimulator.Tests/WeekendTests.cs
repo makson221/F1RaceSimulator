@@ -159,13 +159,14 @@ public class WeekendTests
     // Гонка: телеметрія, коло охолодження, парк-ферме
     // ------------------------------------------------------------------
 
+    /// <summary>Гонка одразу після згасання вогнів (без прогрівального кола) — для тестів руху й фінішу.</summary>
     private static (Race Race, EventLogObserver Log) NewRace(string trackId, int seed)
     {
         var data = TestHelpers.Season;
         var race = new Race(TrackById(trackId), CarFactory.CreateCars(data), new SystemRandomSource(seed), 0);
         var log = new EventLogObserver();
         race.Subscribe(log);
-        race.Start();
+        race.Start(formationLap: false);
         return (race, log);
     }
 
@@ -282,7 +283,8 @@ public class WeekendTests
         foreach (ITrackSession session in sessions)
         {
             Assert.Same(track, session.Track);
-            if (session is Race race) race.Start(); else ((QualifyingSession)session).Start();
+            // Гонку тут починаємо без прогрівального кола: перевіряємо саме 10 хвилин гонки.
+            if (session is Race race) race.Start(formationLap: false); else ((QualifyingSession)session).Start();
             session.Step(600);                 // 10 хвилин сесії
             Assert.True(session.ElapsedSeconds >= 600);
             Assert.False(session.IsCompleted);

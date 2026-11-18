@@ -32,7 +32,19 @@ public enum RaceEventType
     QualifyingSegmentFinished,
 
     /// <summary>Кваліфікацію завершено, визначено поул.</summary>
-    QualifyingFinished
+    QualifyingFinished,
+
+    /// <summary>Боліди вирушили на прогрівальне коло.</summary>
+    FormationLap,
+
+    /// <summary>Усі на решітці — почалася стартова процедура (вогні).</summary>
+    StartLights,
+
+    /// <summary>Сейфті-кар або віртуальний сейфті-кар: виїзд, останнє коло, рестарт.</summary>
+    SafetyCar,
+
+    /// <summary>Інцидент без сходу: розворот, контакт, поганий старт.</summary>
+    Incident
 }
 
 /// <summary>
